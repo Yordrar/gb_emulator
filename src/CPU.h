@@ -5,18 +5,31 @@
 class CPU
 {
 public:
-    CPU(uint8_t* cartridge);
+    CPU(uint8_t* cartridge, size_t cartridgeSize);
     ~CPU();
 
-private:
     static const uint64_t FrequencyHz = 4 * 1024 * 1024;
 
+    uint64_t executeNextInstruction();
+
+private:
+    uint8_t getCarryFlagsForAddition(uint16_t op1, uint16_t op2);
+    uint8_t getCarryFlagsForSubtraction(uint16_t op1, uint16_t op2);
+
     uint8_t* m_cartridge;
+    size_t m_cartridgeSize;
 
     struct Registers
     {
-        uint8_t A;
-        uint8_t F;
+        union
+        {
+            struct
+            {
+                uint8_t A;
+                uint8_t F;
+            };
+            uint16_t AF;
+        };
         union
         {
             struct

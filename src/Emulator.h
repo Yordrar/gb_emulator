@@ -21,9 +21,12 @@ public:
     void openCartridgeFile(char const* cartridgeFilename);
     CartridgeInfo getCartridgeInfo() const { return m_cartridgeInfo; }
 
+    void tick();
+
 private:
     std::unique_ptr<uint8_t[]> m_cartridge;
-    std::unique_ptr<CPU> m_cpu;
-
+    size_t m_cartridgeSize;
     CartridgeInfo m_cartridgeInfo;
+
+    std::unique_ptr<CPU> m_cpu;
 };
