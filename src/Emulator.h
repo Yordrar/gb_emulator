@@ -21,7 +21,7 @@ public:
     void openCartridgeFile(char const* cartridgeFilename);
     CartridgeInfo getCartridgeInfo() const { return m_cartridgeInfo; }
 
-    void tick();
+    void emulate();
 
 private:
     std::unique_ptr<uint8_t[]> m_cartridge;

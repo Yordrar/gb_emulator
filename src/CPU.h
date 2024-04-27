@@ -13,8 +13,10 @@ public:
     uint64_t executeNextInstruction();
 
 private:
-    uint8_t getCarryFlagsForAddition(uint16_t op1, uint16_t op2);
-    uint8_t getCarryFlagsForSubtraction(uint16_t op1, uint16_t op2);
+    uint8_t getCarryFlagsFor8BitAddition(uint8_t op1, uint8_t op2);
+    uint8_t getCarryFlagsFor8BitSubtraction(uint8_t op1, uint8_t op2);
+    uint8_t getCarryFlagsFor16BitAddition(uint16_t op1, uint16_t op2);
+    uint8_t getCarryFlagsFor16BitSubtraction(uint16_t op1, uint16_t op2);
 
     uint8_t* m_cartridge;
     size_t m_cartridgeSize;

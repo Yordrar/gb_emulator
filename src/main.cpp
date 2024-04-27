@@ -85,7 +85,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 
     while (!window.shouldCloseWindow())
     {
-        emulator.tick();
+        emulator.emulate();
 
         renderer->beginFrame();
         renderer->submitRenderPass(mainPass, *scene, { &scene->getCamera() });

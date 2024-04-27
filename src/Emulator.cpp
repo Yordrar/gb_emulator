@@ -1,6 +1,5 @@
 #include "Emulator.h"
 
-#include <Windows.h>
 #include <iostream>
 #include <fstream>
 #include <filesystem>
@@ -34,23 +33,23 @@ void Emulator::openCartridgeFile(char const* cartridgeFilename)
         .m_type = m_cartridge[0x147],
     };
 
-    m_cpu = std::make_unique<CPU>(m_cartridge.get());
+    m_cpu = std::make_unique<CPU>(m_cartridge.get(), m_cartridgeSize);
 }
 
-static uint64_t executedTicks = 0;
-void Emulator::tick()
+static uint64_t executedCycles = 0;
+void Emulator::emulate()
 {
     end = std::chrono::high_resolution_clock::now();
 
-    auto elapsedSeconds = std::chrono::duration_cast<std::chrono::seconds>(end - start);
-    uint64_t elapsedTicks = CPU::FrequencyHz * std::chrono::abs(elapsedSeconds).count();
+    auto elapsedMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    uint64_t elapsedCPUCycles = static_cast<uint64_t>(CPU::FrequencyHz * (std::chrono::abs(elapsedMilliseconds).count() / 1000.0f));
 
-    while (executedTicks < elapsedTicks)
+    while (executedCycles < elapsedCPUCycles)
     {
-        executedTicks += m_cpu->executeNextInstruction();
+        executedCycles += m_cpu->executeNextInstruction();
     }
 
-    executedTicks = executedTicks - elapsedTicks;
+    executedCycles = executedCycles - elapsedCPUCycles;
 
     start = std::chrono::high_resolution_clock::now();
 }
