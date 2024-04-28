@@ -15,7 +15,7 @@ filter "Debug"
 	optimize "off"
 	targetdir "build/bin/debug"
 	debugdir "build/bin/debug"
-	defines "RENDERER_DEBUG"
+	defines {"RENDERER_DEBUG", "EMULATOR_DEBUG"}
 
 filter "Release"
 	runtime "Release"

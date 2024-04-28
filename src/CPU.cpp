@@ -2,6 +2,7 @@
 
 #include <Windows.h>
 #include <string>
+#include <format>
 #include <cassert>
 #include <cstring>
 #include <cmath>
@@ -9,6 +10,7 @@
 CPU::CPU(uint8_t* cartridge, size_t cartridgeSize)
     : m_cartridge(cartridge)
     , m_cartridgeSize(cartridgeSize)
+    , m_interruptMasterEnableFlag(true)
 {
     m_registers =
     {
@@ -61,8 +63,15 @@ CPU::~CPU()
 uint64_t CPU::executeNextInstruction()
 {
     uint8_t opcode = m_memory[m_registers.PC++];
+
+#ifdef EMULATOR_DEBUG
+    OutputDebugStringA("Executing opcode: ");
+    OutputDebugStringA(std::format("{:x}", opcode).c_str());
+    OutputDebugStringA("\n");
+#endif
     
     uint16_t address = 0;
+    uint8_t offset = 0;
     uint8_t n = 0;
     uint8_t carry = 0;
     uint8_t newFlag = 0;
@@ -73,6 +82,8 @@ uint64_t CPU::executeNextInstruction()
     case 0x00:
         return 4;
         break;
+
+        // Prefixed operations
     case 0xCB:
         n = m_memory[m_registers.PC++];
         switch (n)
@@ -149,7 +160,456 @@ uint64_t CPU::executeNextInstruction()
             }
             return 16;
             break;
+
+            // Prefixed rotate operations
+        case 0x07:
+            rotateRegisterLeft(m_registers.A);
+            return 8;
+            break;
+        case 0x00:
+            rotateRegisterLeft(m_registers.B);
+            return 8;
+            break;
+        case 0x01:
+            rotateRegisterLeft(m_registers.C);
+            return 8;
+            break;
+        case 0x02:
+            rotateRegisterLeft(m_registers.D);
+            return 8;
+            break;
+        case 0x03:
+            rotateRegisterLeft(m_registers.E);
+            return 8;
+            break;
+        case 0x04:
+            rotateRegisterLeft(m_registers.H);
+            return 8;
+            break;
+        case 0x05:
+            rotateRegisterLeft(m_registers.L);
+            return 8;
+            break;
+        case 0x06:
+            rotateRegisterLeft(m_memory[m_registers.HL]);
+            return 16;
+            break;
+        case 0x17:
+            rotateRegisterLeftThroughCarry(m_registers.A);
+            return 8;
+            break;
+        case 0x10:
+            rotateRegisterLeftThroughCarry(m_registers.B);
+            return 8;
+            break;
+        case 0x11:
+            rotateRegisterLeftThroughCarry(m_registers.C);
+            return 8;
+            break;
+        case 0x12:
+            rotateRegisterLeftThroughCarry(m_registers.D);
+            return 8;
+            break;
+        case 0x13:
+            rotateRegisterLeftThroughCarry(m_registers.E);
+            return 8;
+            break;
+        case 0x14:
+            rotateRegisterLeftThroughCarry(m_registers.H);
+            return 8;
+            break;
+        case 0x15:
+            rotateRegisterLeftThroughCarry(m_registers.L);
+            return 8;
+            break;
+        case 0x16:
+            rotateRegisterLeftThroughCarry(m_memory[m_registers.HL]);
+            return 16;
+            break;
+        case 0x0F:
+            rotateRegisterRight(m_registers.A);
+            return 8;
+            break;
+        case 0x08:
+            rotateRegisterRight(m_registers.B);
+            return 8;
+            break;
+        case 0x09:
+            rotateRegisterRight(m_registers.C);
+            return 8;
+            break;
+        case 0x0A:
+            rotateRegisterRight(m_registers.D);
+            return 8;
+            break;
+        case 0x0B:
+            rotateRegisterRight(m_registers.E);
+            return 8;
+            break;
+        case 0x0C:
+            rotateRegisterRight(m_registers.H);
+            return 8;
+            break;
+        case 0x0D:
+            rotateRegisterRight(m_registers.L);
+            return 8;
+            break;
+        case 0x0E:
+            rotateRegisterRight(m_memory[m_registers.HL]);
+            return 16;
+            break;
+        case 0x1F:
+            rotateRegisterRightThroughCarry(m_registers.A);
+            return 8;
+            break;
+        case 0x18:
+            rotateRegisterRightThroughCarry(m_registers.B);
+            return 8;
+            break;
+        case 0x19:
+            rotateRegisterRightThroughCarry(m_registers.C);
+            return 8;
+            break;
+        case 0x1A:
+            rotateRegisterRightThroughCarry(m_registers.D);
+            return 8;
+            break;
+        case 0x1B:
+            rotateRegisterRightThroughCarry(m_registers.E);
+            return 8;
+            break;
+        case 0x1C:
+            rotateRegisterRightThroughCarry(m_registers.H);
+            return 8;
+            break;
+        case 0x1D:
+            rotateRegisterRightThroughCarry(m_registers.L);
+            return 8;
+            break;
+        case 0x1E:
+            rotateRegisterRightThroughCarry(m_memory[m_registers.HL]);
+            return 16;
+            break;
+
+            // Prefixed shift operations
+        case 0x27:
+            shiftRegisterLeftArithmetically(m_registers.A);
+            return 8;
+            break;
+        case 0x20:
+            shiftRegisterLeftArithmetically(m_registers.B);
+            return 8;
+            break;
+        case 0x21:
+            shiftRegisterLeftArithmetically(m_registers.C);
+            return 8;
+            break;
+        case 0x22:
+            shiftRegisterLeftArithmetically(m_registers.D);
+            return 8;
+            break;
+        case 0x23:
+            shiftRegisterLeftArithmetically(m_registers.E);
+            return 8;
+            break;
+        case 0x24:
+            shiftRegisterLeftArithmetically(m_registers.H);
+            return 8;
+            break;
+        case 0x25:
+            shiftRegisterLeftArithmetically(m_registers.L);
+            return 8;
+            break;
+        case 0x26:
+            shiftRegisterLeftArithmetically(m_memory[m_registers.HL]);
+            return 16;
+            break;
+        case 0x2F:
+            shiftRegisterRightArithmetically(m_registers.A);
+            return 8;
+            break;
+        case 0x28:
+            shiftRegisterRightArithmetically(m_registers.B);
+            return 8;
+            break;
+        case 0x29:
+            shiftRegisterRightArithmetically(m_registers.C);
+            return 8;
+            break;
+        case 0x2A:
+            shiftRegisterRightArithmetically(m_registers.D);
+            return 8;
+            break;
+        case 0x2B:
+            shiftRegisterRightArithmetically(m_registers.E);
+            return 8;
+            break;
+        case 0x2C:
+            shiftRegisterRightArithmetically(m_registers.H);
+            return 8;
+            break;
+        case 0x2D:
+            shiftRegisterRightArithmetically(m_registers.L);
+            return 8;
+            break;
+        case 0x2E:
+            shiftRegisterRightArithmetically(m_memory[m_registers.HL]);
+            return 16;
+            break;
+        case 0x3F:
+            shiftRegisterRightLogically(m_registers.A);
+            return 8;
+            break;
+        case 0x38:
+            shiftRegisterRightLogically(m_registers.B);
+            return 8;
+            break;
+        case 0x39:
+            shiftRegisterRightLogically(m_registers.C);
+            return 8;
+            break;
+        case 0x3A:
+            shiftRegisterRightLogically(m_registers.D);
+            return 8;
+            break;
+        case 0x3B:
+            shiftRegisterRightLogically(m_registers.E);
+            return 8;
+            break;
+        case 0x3C:
+            shiftRegisterRightLogically(m_registers.H);
+            return 8;
+            break;
+        case 0x3D:
+            shiftRegisterRightLogically(m_registers.L);
+            return 8;
+            break;
+        case 0x3E:
+            shiftRegisterRightLogically(m_memory[m_registers.HL]);
+            return 16;
+            break;
+
+            // Prefixed bit operations
+        case 0x40: testBitInRegister(0, m_registers.B); return 8; break;
+        case 0x41: testBitInRegister(0, m_registers.C); return 8; break;
+        case 0x42: testBitInRegister(0, m_registers.D); return 8; break;
+        case 0x43: testBitInRegister(0, m_registers.E); return 8; break;
+        case 0x44: testBitInRegister(0, m_registers.H); return 8; break;
+        case 0x45: testBitInRegister(0, m_registers.L); return 8; break;
+        case 0x46: testBitInRegister(0, m_memory[m_registers.HL]); return 12; break;
+        case 0x47: testBitInRegister(0, m_registers.A); return 8; break;
+
+        case 0x48: testBitInRegister(1, m_registers.B); return 8; break;
+        case 0x49: testBitInRegister(1, m_registers.C); return 8; break;
+        case 0x4A: testBitInRegister(1, m_registers.D); return 8; break;
+        case 0x4B: testBitInRegister(1, m_registers.E); return 8; break;
+        case 0x4C: testBitInRegister(1, m_registers.H); return 8; break;
+        case 0x4D: testBitInRegister(1, m_registers.L); return 8; break;
+        case 0x4E: testBitInRegister(1, m_memory[m_registers.HL]); return 12; break;
+        case 0x4F: testBitInRegister(1, m_registers.A); return 8; break;
+
+        case 0x50: testBitInRegister(2, m_registers.B); return 8; break;
+        case 0x51: testBitInRegister(2, m_registers.C); return 8; break;
+        case 0x52: testBitInRegister(2, m_registers.D); return 8; break;
+        case 0x53: testBitInRegister(2, m_registers.E); return 8; break;
+        case 0x54: testBitInRegister(2, m_registers.H); return 8; break;
+        case 0x55: testBitInRegister(2, m_registers.L); return 8; break;
+        case 0x56: testBitInRegister(2, m_memory[m_registers.HL]); return 12; break;
+        case 0x57: testBitInRegister(2, m_registers.A); return 8; break;
+
+        case 0x58: testBitInRegister(3, m_registers.B); return 8; break;
+        case 0x59: testBitInRegister(3, m_registers.C); return 8; break;
+        case 0x5A: testBitInRegister(3, m_registers.D); return 8; break;
+        case 0x5B: testBitInRegister(3, m_registers.E); return 8; break;
+        case 0x5C: testBitInRegister(3, m_registers.H); return 8; break;
+        case 0x5D: testBitInRegister(3, m_registers.L); return 8; break;
+        case 0x5E: testBitInRegister(3, m_memory[m_registers.HL]); return 12; break;
+        case 0x5F: testBitInRegister(3, m_registers.A); return 8; break;
+
+        case 0x60: testBitInRegister(4, m_registers.B); return 8; break;
+        case 0x61: testBitInRegister(4, m_registers.C); return 8; break;
+        case 0x62: testBitInRegister(4, m_registers.D); return 8; break;
+        case 0x63: testBitInRegister(4, m_registers.E); return 8; break;
+        case 0x64: testBitInRegister(4, m_registers.H); return 8; break;
+        case 0x65: testBitInRegister(4, m_registers.L); return 8; break;
+        case 0x66: testBitInRegister(4, m_memory[m_registers.HL]); return 12; break;
+        case 0x67: testBitInRegister(4, m_registers.A); return 8; break;
+
+        case 0x68: testBitInRegister(5, m_registers.B); return 8; break;
+        case 0x69: testBitInRegister(5, m_registers.C); return 8; break;
+        case 0x6A: testBitInRegister(5, m_registers.D); return 8; break;
+        case 0x6B: testBitInRegister(5, m_registers.E); return 8; break;
+        case 0x6C: testBitInRegister(5, m_registers.H); return 8; break;
+        case 0x6D: testBitInRegister(5, m_registers.L); return 8; break;
+        case 0x6E: testBitInRegister(5, m_memory[m_registers.HL]); return 12; break;
+        case 0x6F: testBitInRegister(5, m_registers.A); return 8; break;
+
+        case 0x70: testBitInRegister(6, m_registers.B); return 8; break;
+        case 0x71: testBitInRegister(6, m_registers.C); return 8; break;
+        case 0x72: testBitInRegister(6, m_registers.D); return 8; break;
+        case 0x73: testBitInRegister(6, m_registers.E); return 8; break;
+        case 0x74: testBitInRegister(6, m_registers.H); return 8; break;
+        case 0x75: testBitInRegister(6, m_registers.L); return 8; break;
+        case 0x76: testBitInRegister(6, m_memory[m_registers.HL]); return 12; break;
+        case 0x77: testBitInRegister(6, m_registers.A); return 8; break;
+
+        case 0x78: testBitInRegister(7, m_registers.B); return 8; break;
+        case 0x79: testBitInRegister(7, m_registers.C); return 8; break;
+        case 0x7A: testBitInRegister(7, m_registers.D); return 8; break;
+        case 0x7B: testBitInRegister(7, m_registers.E); return 8; break;
+        case 0x7C: testBitInRegister(7, m_registers.H); return 8; break;
+        case 0x7D: testBitInRegister(7, m_registers.L); return 8; break;
+        case 0x7E: testBitInRegister(7, m_memory[m_registers.HL]); return 12; break;
+        case 0x7F: testBitInRegister(7, m_registers.A); return 8; break;
+
+        case 0x80: resetBitInRegister(0, m_registers.B); return 8; break;
+        case 0x81: resetBitInRegister(0, m_registers.C); return 8; break;
+        case 0x82: resetBitInRegister(0, m_registers.D); return 8; break;
+        case 0x83: resetBitInRegister(0, m_registers.E); return 8; break;
+        case 0x84: resetBitInRegister(0, m_registers.H); return 8; break;
+        case 0x85: resetBitInRegister(0, m_registers.L); return 8; break;
+        case 0x86: resetBitInRegister(0, m_memory[m_registers.HL]); return 16; break;
+        case 0x87: resetBitInRegister(0, m_registers.A); return 8; break;
+
+        case 0x88: resetBitInRegister(1, m_registers.B); return 8; break;
+        case 0x89: resetBitInRegister(1, m_registers.C); return 8; break;
+        case 0x8A: resetBitInRegister(1, m_registers.D); return 8; break;
+        case 0x8B: resetBitInRegister(1, m_registers.E); return 8; break;
+        case 0x8C: resetBitInRegister(1, m_registers.H); return 8; break;
+        case 0x8D: resetBitInRegister(1, m_registers.L); return 8; break;
+        case 0x8E: resetBitInRegister(1, m_memory[m_registers.HL]); return 16; break;
+        case 0x8F: resetBitInRegister(1, m_registers.A); return 8; break;
+
+        case 0x90: resetBitInRegister(2, m_registers.B); return 8; break;
+        case 0x91: resetBitInRegister(2, m_registers.C); return 8; break;
+        case 0x92: resetBitInRegister(2, m_registers.D); return 8; break;
+        case 0x93: resetBitInRegister(2, m_registers.E); return 8; break;
+        case 0x94: resetBitInRegister(2, m_registers.H); return 8; break;
+        case 0x95: resetBitInRegister(2, m_registers.L); return 8; break;
+        case 0x96: resetBitInRegister(2, m_memory[m_registers.HL]); return 16; break;
+        case 0x97: resetBitInRegister(2, m_registers.A); return 8; break;
+
+        case 0x98: resetBitInRegister(3, m_registers.B); return 8; break;
+        case 0x99: resetBitInRegister(3, m_registers.C); return 8; break;
+        case 0x9A: resetBitInRegister(3, m_registers.D); return 8; break;
+        case 0x9B: resetBitInRegister(3, m_registers.E); return 8; break;
+        case 0x9C: resetBitInRegister(3, m_registers.H); return 8; break;
+        case 0x9D: resetBitInRegister(3, m_registers.L); return 8; break;
+        case 0x9E: resetBitInRegister(3, m_memory[m_registers.HL]); return 16; break;
+        case 0x9F: resetBitInRegister(3, m_registers.A); return 8; break;
+
+        case 0xA0: resetBitInRegister(4, m_registers.B); return 8; break;
+        case 0xA1: resetBitInRegister(4, m_registers.C); return 8; break;
+        case 0xA2: resetBitInRegister(4, m_registers.D); return 8; break;
+        case 0xA3: resetBitInRegister(4, m_registers.E); return 8; break;
+        case 0xA4: resetBitInRegister(4, m_registers.H); return 8; break;
+        case 0xA5: resetBitInRegister(4, m_registers.L); return 8; break;
+        case 0xA6: resetBitInRegister(4, m_memory[m_registers.HL]); return 16; break;
+        case 0xA7: resetBitInRegister(4, m_registers.A); return 8; break;
+
+        case 0xA8: resetBitInRegister(5, m_registers.B); return 8; break;
+        case 0xA9: resetBitInRegister(5, m_registers.C); return 8; break;
+        case 0xAA: resetBitInRegister(5, m_registers.D); return 8; break;
+        case 0xAB: resetBitInRegister(5, m_registers.E); return 8; break;
+        case 0xAC: resetBitInRegister(5, m_registers.H); return 8; break;
+        case 0xAD: resetBitInRegister(5, m_registers.L); return 8; break;
+        case 0xAE: resetBitInRegister(5, m_memory[m_registers.HL]); return 16; break;
+        case 0xAF: resetBitInRegister(5, m_registers.A); return 8; break;
+
+        case 0xB0: resetBitInRegister(6, m_registers.B); return 8; break;
+        case 0xB1: resetBitInRegister(6, m_registers.C); return 8; break;
+        case 0xB2: resetBitInRegister(6, m_registers.D); return 8; break;
+        case 0xB3: resetBitInRegister(6, m_registers.E); return 8; break;
+        case 0xB4: resetBitInRegister(6, m_registers.H); return 8; break;
+        case 0xB5: resetBitInRegister(6, m_registers.L); return 8; break;
+        case 0xB6: resetBitInRegister(6, m_memory[m_registers.HL]); return 16; break;
+        case 0xB7: resetBitInRegister(6, m_registers.A); return 8; break;
+
+        case 0xB8: resetBitInRegister(7, m_registers.B); return 8; break;
+        case 0xB9: resetBitInRegister(7, m_registers.C); return 8; break;
+        case 0xBA: resetBitInRegister(7, m_registers.D); return 8; break;
+        case 0xBB: resetBitInRegister(7, m_registers.E); return 8; break;
+        case 0xBC: resetBitInRegister(7, m_registers.H); return 8; break;
+        case 0xBD: resetBitInRegister(7, m_registers.L); return 8; break;
+        case 0xBE: resetBitInRegister(7, m_memory[m_registers.HL]); return 16; break;
+        case 0xBF: resetBitInRegister(7, m_registers.A); return 8; break;
+
+        case 0xC0: setBitInRegister(0, m_registers.B); return 8; break;
+        case 0xC1: setBitInRegister(0, m_registers.C); return 8; break;
+        case 0xC2: setBitInRegister(0, m_registers.D); return 8; break;
+        case 0xC3: setBitInRegister(0, m_registers.E); return 8; break;
+        case 0xC4: setBitInRegister(0, m_registers.H); return 8; break;
+        case 0xC5: setBitInRegister(0, m_registers.L); return 8; break;
+        case 0xC6: setBitInRegister(0, m_memory[m_registers.HL]); return 16; break;
+        case 0xC7: setBitInRegister(0, m_registers.A); return 8; break;
+
+        case 0xC8: setBitInRegister(1, m_registers.B); return 8; break;
+        case 0xC9: setBitInRegister(1, m_registers.C); return 8; break;
+        case 0xCA: setBitInRegister(1, m_registers.D); return 8; break;
+        case 0xCB: setBitInRegister(1, m_registers.E); return 8; break;
+        case 0xCC: setBitInRegister(1, m_registers.H); return 8; break;
+        case 0xCD: setBitInRegister(1, m_registers.L); return 8; break;
+        case 0xCE: setBitInRegister(1, m_memory[m_registers.HL]); return 16; break;
+        case 0xCF: setBitInRegister(1, m_registers.A); return 8; break;
+
+        case 0xD0: setBitInRegister(2, m_registers.B); return 8; break;
+        case 0xD1: setBitInRegister(2, m_registers.C); return 8; break;
+        case 0xD2: setBitInRegister(2, m_registers.D); return 8; break;
+        case 0xD3: setBitInRegister(2, m_registers.E); return 8; break;
+        case 0xD4: setBitInRegister(2, m_registers.H); return 8; break;
+        case 0xD5: setBitInRegister(2, m_registers.L); return 8; break;
+        case 0xD6: setBitInRegister(2, m_memory[m_registers.HL]); return 16; break;
+        case 0xD7: setBitInRegister(2, m_registers.A); return 8; break;
+
+        case 0xD8: setBitInRegister(3, m_registers.B); return 8; break;
+        case 0xD9: setBitInRegister(3, m_registers.C); return 8; break;
+        case 0xDA: setBitInRegister(3, m_registers.D); return 8; break;
+        case 0xDB: setBitInRegister(3, m_registers.E); return 8; break;
+        case 0xDC: setBitInRegister(3, m_registers.H); return 8; break;
+        case 0xDD: setBitInRegister(3, m_registers.L); return 8; break;
+        case 0xDE: setBitInRegister(3, m_memory[m_registers.HL]); return 16; break;
+        case 0xDF: setBitInRegister(3, m_registers.A); return 8; break;
+
+        case 0xE0: setBitInRegister(4, m_registers.B); return 8; break;
+        case 0xE1: setBitInRegister(4, m_registers.C); return 8; break;
+        case 0xE2: setBitInRegister(4, m_registers.D); return 8; break;
+        case 0xE3: setBitInRegister(4, m_registers.E); return 8; break;
+        case 0xE4: setBitInRegister(4, m_registers.H); return 8; break;
+        case 0xE5: setBitInRegister(4, m_registers.L); return 8; break;
+        case 0xE6: setBitInRegister(4, m_memory[m_registers.HL]); return 16; break;
+        case 0xE7: setBitInRegister(4, m_registers.A); return 8; break;
+
+        case 0xE8: setBitInRegister(5, m_registers.B); return 8; break;
+        case 0xE9: setBitInRegister(5, m_registers.C); return 8; break;
+        case 0xEA: setBitInRegister(5, m_registers.D); return 8; break;
+        case 0xEB: setBitInRegister(5, m_registers.E); return 8; break;
+        case 0xEC: setBitInRegister(5, m_registers.H); return 8; break;
+        case 0xED: setBitInRegister(5, m_registers.L); return 8; break;
+        case 0xEE: setBitInRegister(5, m_memory[m_registers.HL]); return 16; break;
+        case 0xEF: setBitInRegister(5, m_registers.A); return 8; break;
+
+        case 0xF0: setBitInRegister(6, m_registers.B); return 8; break;
+        case 0xF1: setBitInRegister(6, m_registers.C); return 8; break;
+        case 0xF2: setBitInRegister(6, m_registers.D); return 8; break;
+        case 0xF3: setBitInRegister(6, m_registers.E); return 8; break;
+        case 0xF4: setBitInRegister(6, m_registers.H); return 8; break;
+        case 0xF5: setBitInRegister(6, m_registers.L); return 8; break;
+        case 0xF6: setBitInRegister(6, m_memory[m_registers.HL]); return 16; break;
+        case 0xF7: setBitInRegister(6, m_registers.A); return 8; break;
+
+        case 0xF8: setBitInRegister(7, m_registers.B); return 8; break;
+        case 0xF9: setBitInRegister(7, m_registers.C); return 8; break;
+        case 0xFA: setBitInRegister(7, m_registers.D); return 8; break;
+        case 0xFB: setBitInRegister(7, m_registers.E); return 8; break;
+        case 0xFC: setBitInRegister(7, m_registers.H); return 8; break;
+        case 0xFD: setBitInRegister(7, m_registers.L); return 8; break;
+        case 0xFE: setBitInRegister(7, m_memory[m_registers.HL]); return 16; break;
+        case 0xFF: setBitInRegister(7, m_registers.A); return 8; break;
+        
         default:
+            OutputDebugStringA("Unknown prefixed opcode: ");
+            OutputDebugStringA(std::format("{:x}", n).c_str());
+            OutputDebugStringA("\n");
             assert(false);
             return 0;
             break;
@@ -179,19 +639,23 @@ uint64_t CPU::executeNextInstruction()
         return 4;
         break;
     case 0x76:
-        // TODO: HALT opcode
-        return 4;
+        m_registers.PC--;
+        return 0;
         break;
     case 0x10:
-        // TODO: STOP opcode
-        return 4;
+        // This is the STOP instruction which
+        // in this case behaves like a HALT
+        // Technically not correct, but eh, should be fine
+        // TODO maybe fix this in the future
+        m_registers.PC--;
+        return 0;
         break;
     case 0xF3:
-        // TODO: DI opcode
+        m_interruptMasterEnableFlag = false;
         return 4;
         break;
     case 0xFB:
-        // TODO: EI opcode
+        m_interruptMasterEnableFlag = true;
         return 4;
         break;
 
@@ -457,7 +921,7 @@ uint64_t CPU::executeNextInstruction()
         return 8;
         break;
     case 0xFA:
-        m_registers.A = m_memory[(m_memory[m_registers.PC++]) | (m_memory[m_registers.PC++] << 8)];
+        m_registers.A = m_memory[(m_memory[m_registers.PC++] >> 0) | (m_memory[m_registers.PC++] << 8)];
         return 16;
         break;
     case 0x3E:
@@ -501,7 +965,7 @@ uint64_t CPU::executeNextInstruction()
         return 8;
         break;
     case 0xEA:
-        m_memory[(m_memory[m_registers.PC++]) | (m_memory[m_registers.PC++] << 8)] = m_registers.A;
+        m_memory[(m_memory[m_registers.PC++] >> 0) | (m_memory[m_registers.PC++] << 8)] = m_registers.A;
         return 16;
         break;
     case 0xF2:
@@ -543,19 +1007,19 @@ uint64_t CPU::executeNextInstruction()
 
     // 16-bit load operations
     case 0x01:
-        m_registers.BC = (m_memory[m_registers.PC++]) | (m_memory[m_registers.PC++] << 8);
+        m_registers.BC = (m_memory[m_registers.PC++] >> 0) | (m_memory[m_registers.PC++] << 8);
         return 12;
         break;
     case 0x11:
-        m_registers.DE = (m_memory[m_registers.PC++]) | (m_memory[m_registers.PC++] << 8);
+        m_registers.DE = (m_memory[m_registers.PC++] >> 0) | (m_memory[m_registers.PC++] << 8);
         return 12;
         break;
     case 0x21:
-        m_registers.HL = (m_memory[m_registers.PC++]) | (m_memory[m_registers.PC++] << 8);
+        m_registers.HL = (m_memory[m_registers.PC++] >> 0) | (m_memory[m_registers.PC++] << 8);
         return 12;
         break;
     case 0x31:
-        m_registers.SP = (m_memory[m_registers.PC++]) | (m_memory[m_registers.PC++] << 8);
+        m_registers.SP = (m_memory[m_registers.PC++] >> 0) | (m_memory[m_registers.PC++] << 8);
         return 12;
         break;
     case 0xF9:
@@ -569,49 +1033,49 @@ uint64_t CPU::executeNextInstruction()
         return 12;
         break;
     case 0x08:
-        address = (m_memory[m_registers.PC++]) | (m_memory[m_registers.PC++] << 8);
+        address = (m_memory[m_registers.PC++] >> 0) | (m_memory[m_registers.PC++] << 8);
         m_memory[address] = m_registers.SP & 0xFF;
         m_memory[address+1] = m_registers.SP >> 8;
         return 20;
         break;
     case 0xF5:
-        m_memory[m_registers.SP--] = m_registers.A;
         m_memory[m_registers.SP--] = m_registers.F;
+        m_memory[m_registers.SP--] = m_registers.A;
         return 16;
         break;
     case 0xC5:
-        m_memory[m_registers.SP--] = m_registers.B;
+        m_memory[m_registers.SP--] = m_registers.C;
         m_memory[m_registers.SP--] = m_registers.B;
         return 16;
         break;
     case 0xD5:
-        m_memory[m_registers.SP--] = m_registers.D;
         m_memory[m_registers.SP--] = m_registers.E;
+        m_memory[m_registers.SP--] = m_registers.D;
         return 16;
         break;
     case 0xE5:
-        m_memory[m_registers.SP--] = m_registers.H;
         m_memory[m_registers.SP--] = m_registers.L;
+        m_memory[m_registers.SP--] = m_registers.H;
         return 16;
         break;
     case 0xF1:
-        m_registers.A = m_memory[m_registers.SP++];
-        m_registers.F = m_memory[m_registers.SP++];
+        m_registers.A = m_memory[++m_registers.SP];
+        m_registers.F = m_memory[++m_registers.SP];
         return 12;
         break;
     case 0xC1:
-        m_registers.B = m_memory[m_registers.SP++];
-        m_registers.C = m_memory[m_registers.SP++];
+        m_registers.B = m_memory[++m_registers.SP];
+        m_registers.C = m_memory[++m_registers.SP];
         return 12;
         break;
     case 0xD1:
-        m_registers.D = m_memory[m_registers.SP++];
-        m_registers.E = m_memory[m_registers.SP++];
+        m_registers.D = m_memory[++m_registers.SP];
+        m_registers.E = m_memory[++m_registers.SP];
         return 12;
         break;
     case 0xE1:
-        m_registers.H = m_memory[m_registers.SP++];
-        m_registers.L = m_memory[m_registers.SP++];
+        m_registers.H = m_memory[++m_registers.SP];
+        m_registers.L = m_memory[++m_registers.SP];
         return 12;
         break;
 
@@ -1407,38 +1871,298 @@ uint64_t CPU::executeNextInstruction()
 
         // Rotate and shift operations
     case 0x07:
-        n = (m_registers.A & 0b10000000)>>7;
-        m_registers.A <<= 1;
-        m_registers.A |= n;
-        newFlag |= (n << 4);
-        if (m_registers.A == 0)
-        {
-            newFlag |= 0b10000000;
-        }
-        m_registers.F = newFlag;
+        rotateRegisterLeft(m_registers.A);
         return 4;
         break;
     case 0x17:
-        n = (m_registers.A & 0b10000000) >> 7;
-        m_registers.A <<= 1;
-        m_registers.A |= ((m_registers.F&0b00010000) >> 4);
-        newFlag |= (n << 4);
-        if (m_registers.A == 0)
-        {
-            newFlag |= 0b10000000;
-        }
-        m_registers.F = newFlag;
+        rotateRegisterLeftThroughCarry(m_registers.A);
         return 4;
+        break;
+    case 0x0F:
+        rotateRegisterRight(m_registers.A);
+        return 4;
+        break;
+    case 0x1F:
+        rotateRegisterRightThroughCarry(m_registers.A);
+        return 4;
+        break;
+
+        // Jump operations
+    case 0xC3:
+        m_registers.PC = (uint16_t(m_memory[m_registers.PC++]) >> 0) | uint16_t(m_memory[m_registers.PC++] << 8);
+        return 12;
+        break;
+    case 0xC2:
+        n = (m_registers.F & 0b10000000) >> 7;
+        if (n == 0)
+        {
+            m_registers.PC = (uint16_t(m_memory[m_registers.PC++]) >> 0) | uint16_t(m_memory[m_registers.PC++] << 8);
+            return 12;
+        }
+        return 8;
+        break;
+    case 0xCA:
+        n = (m_registers.F & 0b10000000) >> 7;
+        if (n == 1)
+        {
+            m_registers.PC = (uint16_t(m_memory[m_registers.PC++]) >> 0) | uint16_t(m_memory[m_registers.PC++] << 8);
+            return 12;
+        }
+        return 8;
+        break;
+    case 0xD2:
+        n = (m_registers.F & 0b00010000) >> 4;
+        if (n == 0)
+        {
+            m_registers.PC = (uint16_t(m_memory[m_registers.PC++]) >> 0) | uint16_t(m_memory[m_registers.PC++] << 8);
+            return 12;
+        }
+        return 8;
+        break;
+    case 0xDA:
+        n = (m_registers.F & 0b00010000) >> 4;
+        if (n == 1)
+        {
+            m_registers.PC = (uint16_t(m_memory[m_registers.PC++]) >> 0) | uint16_t(m_memory[m_registers.PC++] << 8);
+            return 12;
+        }
+        return 8;
+        break;
+    case 0xE9:
+        m_registers.PC = m_registers.HL;
+        return 4;
+        break;
+    case 0x18:
+        m_registers.PC += int8_t(m_memory[m_registers.PC++]);
+        return 8;
+        break;
+    case 0x20:
+        offset = m_memory[m_registers.PC++];
+        n = (m_registers.F & 0b10000000) >> 7;
+        if (n == 0)
+        {
+            m_registers.PC += int8_t(offset);
+            return 12;
+        }
+        return 8;
+        break;
+    case 0x28:
+        offset = m_memory[m_registers.PC++];
+        n = (m_registers.F & 0b10000000) >> 7;
+        if (n == 1)
+        {
+            m_registers.PC += int8_t(offset);
+            return 12;
+        }
+        return 8;
+        break;
+    case 0x30:
+        offset = m_memory[m_registers.PC++];
+        n = (m_registers.F & 0b00010000) >> 4;
+        if (n == 0)
+        {
+            m_registers.PC += int8_t(offset);
+            return 12;
+        }
+        return 8;
+        break;
+    case 0x38:
+        offset = m_memory[m_registers.PC++];
+        n = (m_registers.F & 0b00010000) >> 4;
+        if (n == 1)
+        {
+            m_registers.PC += int8_t(offset);
+            return 12;
+        }
+        return 8;
+        break;
+
+        // Call operations
+    case 0xCD:
+        address = (uint16_t(m_memory[m_registers.PC++]) >> 0) | uint16_t(m_memory[m_registers.PC++] << 8);
+        m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x0F);
+        m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xF0) >> 8);
+        m_registers.PC = address;
+        return 24;
+        break;
+    case 0xC4:
+        n = (m_registers.F & 0b10000000) >> 7;
+        if (n == 0)
+        {
+            address = (uint16_t(m_memory[m_registers.PC++]) >> 0) | uint16_t(m_memory[m_registers.PC++] << 8);
+            m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x0F);
+            m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xF0) >> 8);
+            m_registers.PC = address;
+            return 24;
+        }
+        return 12;
+        break;
+    case 0xCC:
+        n = (m_registers.F & 0b10000000) >> 7;
+        if (n == 1)
+        {
+            address = (uint16_t(m_memory[m_registers.PC++]) >> 0) | uint16_t(m_memory[m_registers.PC++] << 8);
+            m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x0F);
+            m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xF0) >> 8);
+            m_registers.PC = address;
+            return 24;
+        }
+        return 12;
+        break;
+    case 0xD4:
+        n = (m_registers.F & 0b00010000) >> 4;
+        if (n == 0)
+        {
+            address = (uint16_t(m_memory[m_registers.PC++]) >> 0) | uint16_t(m_memory[m_registers.PC++] << 8);
+            m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x0F);
+            m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xF0) >> 8);
+            m_registers.PC = address;
+            return 24;
+        }
+        return 12;
+        break;
+    case 0xDC:
+        n = (m_registers.F & 0b00010000) >> 4;
+        if (n == 1)
+        {
+            address = (uint16_t(m_memory[m_registers.PC++]) >> 0) | uint16_t(m_memory[m_registers.PC++] << 8);
+            m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x0F);
+            m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xF0) >> 8);
+            m_registers.PC = address;
+            return 24;
+        }
+        return 12;
+        break;
+
+        // Returns
+    case 0xC9:
+        m_registers.PC = uint16_t(m_memory[++m_registers.SP]) << 8;
+        m_registers.PC |= uint16_t(m_memory[++m_registers.SP]);
+        return 16;
+        break;
+    case 0xC0:
+        n = (m_registers.F & 0b10000000) >> 7;
+        if (n == 0)
+        {
+            m_registers.PC = uint16_t(m_memory[++m_registers.SP]) << 8;
+            m_registers.PC |= uint16_t(m_memory[++m_registers.SP]);
+            return 20;
+        }
+        return 8;
+        break;
+    case 0xC8:
+        n = (m_registers.F & 0b10000000) >> 7;
+        if (n == 1)
+        {
+            m_registers.PC = uint16_t(m_memory[++m_registers.SP]) << 8;
+            m_registers.PC |= uint16_t(m_memory[++m_registers.SP]);
+            return 20;
+        }
+        return 8;
+        break;
+    case 0xD0:
+        n = (m_registers.F & 0b00010000) >> 4;
+        if (n == 0)
+        {
+            m_registers.PC = uint16_t(m_memory[++m_registers.SP]) << 8;
+            m_registers.PC |= uint16_t(m_memory[++m_registers.SP]);
+            return 20;
+        }
+        return 8;
+        break;
+    case 0xD8:
+        n = (m_registers.F & 0b00010000) >> 4;
+        if (n == 1)
+        {
+            m_registers.PC = uint16_t(m_memory[++m_registers.SP]) << 8;
+            m_registers.PC |= uint16_t(m_memory[++m_registers.SP]);
+            return 20;
+        }
+        return 8;
+        break;
+    case 0xD9:
+        m_registers.PC = uint16_t(m_memory[++m_registers.SP]) << 8;
+        m_registers.PC |= uint16_t(m_memory[++m_registers.SP]);
+        m_interruptMasterEnableFlag = true;
+        return 16;
         break;
 
         // Unimplemented or not supported opcode
     default:
         OutputDebugStringA("Unknown opcode: ");
-        OutputDebugStringA(std::to_string(opcode).c_str());
+        OutputDebugStringA(std::format("{:x}", opcode).c_str());
         OutputDebugStringA("\n");
         assert(false);
         return 0;
         break;
+    }
+}
+
+void CPU::requestInterrupt(Interrupt interrupt)
+{
+    m_memory[0xFF0F] |= (1 << interrupt);
+}
+
+void CPU::jumpToInterruptIfAnyPending()
+{
+    if (!m_interruptMasterEnableFlag)
+    {
+        return;
+    }
+
+    // VBlank interrupt
+    if ((m_memory[0xFF0F] & 1) && (m_memory[0xFFFF] & 1))
+    {
+        m_memory[0xFF0F] &= ~1;
+        m_interruptMasterEnableFlag = false;
+
+        m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x0F);
+        m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xF0) >> 8);
+        m_registers.PC = 0x0040;
+    }
+
+    // LCD_STAT interrupt
+    if ((m_memory[0xFF0F] & 2) && (m_memory[0xFFFF] & 2))
+    {
+        m_memory[0xFF0F] &= ~2;
+        m_interruptMasterEnableFlag = false;
+
+        m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x0F);
+        m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xF0) >> 8);
+        m_registers.PC = 0x0048;
+    }
+
+    // Timer interrupt
+    if ((m_memory[0xFF0F] & 4) && (m_memory[0xFFFF] & 4))
+    {
+        m_memory[0xFF0F] &= ~4;
+        m_interruptMasterEnableFlag = false;
+
+        m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x0F);
+        m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xF0) >> 8);
+        m_registers.PC = 0x0050;
+    }
+
+    // Serial interrupt
+    if ((m_memory[0xFF0F] & 8) && (m_memory[0xFFFF] & 8))
+    {
+        m_memory[0xFF0F] &= ~8;
+        m_interruptMasterEnableFlag = false;
+
+        m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x0F);
+        m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xF0) >> 8);
+        m_registers.PC = 0x0058;
+    }
+
+    // Joypad interrupt
+    if ((m_memory[0xFF0F] & 16) && (m_memory[0xFFFF] & 16))
+    {
+        m_memory[0xFF0F] &= ~1;
+        m_interruptMasterEnableFlag = false;
+
+        m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x0F);
+        m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xF0) >> 8);
+        m_registers.PC = 0x0060;
     }
 }
 
@@ -1511,4 +2235,117 @@ uint8_t CPU::getCarryFlagsFor16BitSubtraction(uint16_t op1, uint16_t op2)
     }
     newFlag |= 0b01000000;
     return newFlag;
+}
+
+void CPU::rotateRegisterLeft(uint8_t& reg)
+{
+    uint8_t n = (reg & 0b10000000) >> 7;
+    reg <<= 1;
+    reg |= n;
+    uint8_t newFlag = (n << 4);
+    if (reg == 0)
+    {
+        newFlag |= 0b10000000;
+    }
+    m_registers.F = newFlag;
+}
+
+void CPU::rotateRegisterLeftThroughCarry(uint8_t& reg)
+{
+    uint8_t n = (reg & 0b10000000) >> 7;
+    reg <<= 1;
+    reg |= ((m_registers.F & 0b00010000) >> 4);
+    uint8_t newFlag = (n << 4);
+    if (reg == 0)
+    {
+        newFlag |= 0b10000000;
+    }
+    m_registers.F = newFlag;
+}
+
+void CPU::rotateRegisterRight(uint8_t& reg)
+{
+    uint8_t n = (reg & 0b00000001) << 7;
+    reg >>= 1;
+    reg |= n;
+    uint8_t newFlag = (n >> 3);
+    if (reg == 0)
+    {
+        newFlag |= 0b10000000;
+    }
+    m_registers.F = newFlag;
+}
+
+void CPU::rotateRegisterRightThroughCarry(uint8_t& reg)
+{
+    uint8_t n = (reg & 0b00000001) << 7;
+    reg >>= 1;
+    reg |= ((m_registers.F & 0b00010000) << 3);
+    uint8_t newFlag = (n >> 3);
+    if (reg == 0)
+    {
+        newFlag |= 0b10000000;
+    }
+    m_registers.F = newFlag;
+}
+
+void CPU::shiftRegisterLeftArithmetically(uint8_t& reg)
+{
+    uint8_t mostSignificantBit = reg & 0b10000000;
+    reg <<= 1;
+    reg &= 0b11111110;
+    uint8_t newFlag = (mostSignificantBit >> 3);
+    if (reg == 0)
+    {
+        newFlag |= 0b10000000;
+    }
+    m_registers.F = newFlag;
+}
+
+void CPU::shiftRegisterRightArithmetically(uint8_t& reg)
+{
+    uint8_t leastSignificantBit = reg & 1;
+    uint8_t mostSignificantBit = reg & 0b10000000;
+    reg >>= 1;
+    reg |= mostSignificantBit;
+    uint8_t newFlag = (leastSignificantBit << 4);
+    if (reg == 0)
+    {
+        newFlag |= 0b10000000;
+    }
+    m_registers.F = newFlag;
+}
+
+void CPU::shiftRegisterRightLogically(uint8_t& reg)
+{
+    uint8_t leastSignificantBit = reg & 1;
+    reg >>= 1;
+    reg &= 0b01111111;
+    uint8_t newFlag = (leastSignificantBit << 4);
+    if (reg == 0)
+    {
+        newFlag |= 0b10000000;
+    }
+    m_registers.F = newFlag;
+}
+
+void CPU::testBitInRegister(uint8_t bit, uint8_t& reg)
+{
+    uint8_t extractedBit = (reg & (1 << bit)) >> bit;
+    uint8_t newFlag = 0b00100000;
+    if (extractedBit == 0)
+    {
+        newFlag |= 0b10000000;
+    }
+    m_registers.F = (m_registers.F & 0b0001000) | newFlag;
+}
+
+void CPU::setBitInRegister(uint8_t bit, uint8_t& reg)
+{
+    reg |= (1 << bit);
+}
+
+void CPU::resetBitInRegister(uint8_t bit, uint8_t& reg)
+{
+    reg &= ~(1 << bit);
 }

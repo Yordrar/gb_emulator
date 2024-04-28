@@ -78,7 +78,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
                 Emulator::CartridgeInfo cartInfo = emulator.getCartridgeInfo();
                 ImGui::Begin("Cartridge Info", &show_window);
                 ImGui::Text("Name: %s", cartInfo.m_name.c_str());
-                ImGui::Text("Type: %d", cartInfo.m_type);
+                ImGui::Text("Type: 0x%x", cartInfo.m_type);
                 ImGui::End();
             }
         });
