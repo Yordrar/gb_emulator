@@ -61,7 +61,7 @@ void ResourceManager::destroyResource(ResourceHandle handle)
 void ResourceManager::createSampler( wchar_t const* resourceName )
 {
     D3D12_SAMPLER_DESC samplerDesc = {};
-    samplerDesc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+    samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
     samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
     samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
     samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -212,6 +212,12 @@ D3D12_RESOURCE_DESC ResourceManager::getResourceDesc(ResourceHandle handle) cons
 {
     assert(isResourceHandleValid(handle));
     return m_resources[handle.m_index].m_resource.getResourceDesc();
+}
+
+void* ResourceManager::getResourceDataPtr(ResourceHandle handle)
+{
+    assert(isResourceHandleValid(handle));
+    return (void*)m_resources[handle.m_index].m_resource.m_subresourceData.pData;
 }
 
 void ResourceManager::setResourceNeedsCopyToGPU(ResourceHandle handle)

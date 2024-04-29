@@ -87,11 +87,8 @@ uint64_t CPU::executeInstruction()
 
     uint8_t opcode = m_memory[m_registers.PC++];
 
-#if 0
-    OutputDebugStringA("Executing opcode: ");
-    OutputDebugStringA(std::format("{:x}", opcode).c_str());
-    OutputDebugStringA("\n");
-#endif
+    //OutputDebugStringA("Executing opcode: ");
+    //OutputDebugStringA(std::format("{:x}\n", opcode).c_str());
     
     uint16_t address = 0;
     uint8_t offset = 0;
@@ -2003,8 +2000,8 @@ uint64_t CPU::executeInstruction()
         // Call operations
     case 0xCD:
         address = (uint16_t(m_memory[m_registers.PC++]) >> 0) | uint16_t(m_memory[m_registers.PC++] << 8);
-        m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x0F);
-        m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xF0) >> 8);
+        m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x00FF);
+        m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xFF00) >> 8);
         m_registers.PC = address;
         return 24;
         break;
@@ -2013,8 +2010,8 @@ uint64_t CPU::executeInstruction()
         if (n == 0)
         {
             address = (uint16_t(m_memory[m_registers.PC++]) >> 0) | uint16_t(m_memory[m_registers.PC++] << 8);
-            m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x0F);
-            m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xF0) >> 8);
+            m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x00FF);
+            m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xFF00) >> 8);
             m_registers.PC = address;
             return 24;
         }
@@ -2025,8 +2022,8 @@ uint64_t CPU::executeInstruction()
         if (n == 1)
         {
             address = (uint16_t(m_memory[m_registers.PC++]) >> 0) | uint16_t(m_memory[m_registers.PC++] << 8);
-            m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x0F);
-            m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xF0) >> 8);
+            m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x00FF);
+            m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xFF00) >> 8);
             m_registers.PC = address;
             return 24;
         }
@@ -2037,8 +2034,8 @@ uint64_t CPU::executeInstruction()
         if (n == 0)
         {
             address = (uint16_t(m_memory[m_registers.PC++]) >> 0) | uint16_t(m_memory[m_registers.PC++] << 8);
-            m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x0F);
-            m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xF0) >> 8);
+            m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x00FF);
+            m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xFF00) >> 8);
             m_registers.PC = address;
             return 24;
         }
@@ -2049,8 +2046,8 @@ uint64_t CPU::executeInstruction()
         if (n == 1)
         {
             address = (uint16_t(m_memory[m_registers.PC++]) >> 0) | uint16_t(m_memory[m_registers.PC++] << 8);
-            m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x0F);
-            m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xF0) >> 8);
+            m_memory[m_registers.SP--] = uint8_t(m_registers.PC & 0x00FF);
+            m_memory[m_registers.SP--] = uint8_t((m_registers.PC & 0xFF00) >> 8);
             m_registers.PC = address;
             return 24;
         }

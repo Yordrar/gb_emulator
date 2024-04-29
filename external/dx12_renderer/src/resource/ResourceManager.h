@@ -27,6 +27,7 @@ public:
     D3D12_RESOURCE_STATES getResourceState(ResourceHandle handle) const;
     D3D12_RESOURCE_BARRIER getTransitionBarrier(ResourceHandle handle, D3D12_RESOURCE_STATES newState);
     D3D12_RESOURCE_DESC getResourceDesc(ResourceHandle handle) const;
+    void* getResourceDataPtr(ResourceHandle handle);
     void setResourceNeedsCopyToGPU(ResourceHandle handle);
 
     void copyResourcesToGPU( ComPtr<ID3D12GraphicsCommandList> commandList );

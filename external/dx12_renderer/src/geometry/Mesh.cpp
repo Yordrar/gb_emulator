@@ -32,7 +32,10 @@ void Mesh::record( ComPtr<ID3D12GraphicsCommandList> commandList )
 {
     BarrierRecorder br;
     br.recordBarrierTransition(m_vertexBuffer->getResource(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-    br.recordBarrierTransition(m_indexBuffer->getResource(), D3D12_RESOURCE_STATE_INDEX_BUFFER);
+    if (m_indexBuffer)
+    {
+        br.recordBarrierTransition(m_indexBuffer->getResource(), D3D12_RESOURCE_STATE_INDEX_BUFFER);
+    }
     br.submitBarriers(commandList);
 
     commandList->IASetPrimitiveTopology( m_primitiveTopology );

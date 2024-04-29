@@ -8,10 +8,12 @@
 
 #include "CPU.h"
 #include "Timer.h"
+#include "LCD.h"
 
 std::chrono::steady_clock::time_point start;
 std::chrono::steady_clock::time_point end;
-Emulator::Emulator()
+Emulator::Emulator(ResourceHandle frameTexture)
+    : m_frameTexture(frameTexture)
 {
     start = std::chrono::high_resolution_clock::now();
 }
@@ -36,6 +38,7 @@ void Emulator::openCartridgeFile(char const* cartridgeFilename)
 
     m_cpu = std::make_unique<CPU>(m_cartridge.get(), m_cartridgeSize);
     m_timer = std::make_unique<Timer>(m_cpu.get());
+    m_lcd = std::make_unique<LCD>(m_cpu.get(), m_frameTexture);
 }
 
 void Emulator::emulate()
@@ -46,6 +49,7 @@ void Emulator::emulate()
     double deltaTimeSeconds = std::chrono::abs(elapsedMilliseconds).count() / 1000.0;
 
     m_timer->update(deltaTimeSeconds);
+    m_lcd->update(deltaTimeSeconds);
     m_cpu->update(deltaTimeSeconds);
 
     start = std::chrono::high_resolution_clock::now();

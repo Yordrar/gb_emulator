@@ -24,8 +24,16 @@ void Timer::update(double deltaTimeSeconds)
     }
 
     // DIV
-    m_dividerRegister += 16384 * deltaTimeSeconds;
-    memory[0xFF04] = static_cast<uint8_t>(m_dividerRegister) % 256;
+    if (memory[0xFF04] != static_cast<uint8_t>(m_dividerRegister) % 256)
+    {
+        m_dividerRegister = 0;
+        memory[0xFF04] = 0;
+    }
+    else
+    {
+        m_dividerRegister += 16384 * deltaTimeSeconds;
+        memory[0xFF04] = static_cast<uint8_t>(m_dividerRegister) % 256;
+    }
 
     // TIMA
     uint8_t inputClockSelect = (memory[0xFF07] & 0x3);
