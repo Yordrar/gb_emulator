@@ -5,6 +5,7 @@
 #include <memory>
 
 class CPU;
+class Timer;
 
 class Emulator
 {
@@ -29,4 +30,5 @@ private:
     CartridgeInfo m_cartridgeInfo;
 
     std::unique_ptr<CPU> m_cpu;
+    std::unique_ptr<Timer> m_timer;
 };

@@ -19,10 +19,13 @@ public:
 
     static const uint64_t FrequencyHz = 4 * 1024 * 1024;
 
-    uint64_t executeNextInstruction();
+    uint8_t* getMemory() { return m_memory; }
+
+    void update(double deltaTimeSeconds);
     void requestInterrupt(Interrupt interrupt);
 
 private:
+    uint64_t executeInstruction();
     void jumpToInterruptIfAnyPending();
 
     uint8_t getCarryFlagsFor8BitAddition(uint8_t op1, uint8_t op2);

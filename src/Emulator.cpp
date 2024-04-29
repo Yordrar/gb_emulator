@@ -7,6 +7,7 @@
 #include <chrono>
 
 #include "CPU.h"
+#include "Timer.h"
 
 std::chrono::steady_clock::time_point start;
 std::chrono::steady_clock::time_point end;
@@ -34,22 +35,18 @@ void Emulator::openCartridgeFile(char const* cartridgeFilename)
     };
 
     m_cpu = std::make_unique<CPU>(m_cartridge.get(), m_cartridgeSize);
+    m_timer = std::make_unique<Timer>(m_cpu.get());
 }
 
-static uint64_t executedCycles = 0;
 void Emulator::emulate()
 {
     end = std::chrono::high_resolution_clock::now();
 
     auto elapsedMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    uint64_t elapsedCPUCycles = static_cast<uint64_t>(CPU::FrequencyHz * (std::chrono::abs(elapsedMilliseconds).count() / 1000.0f));
+    double deltaTimeSeconds = std::chrono::abs(elapsedMilliseconds).count() / 1000.0;
 
-    while (executedCycles < elapsedCPUCycles)
-    {
-        executedCycles += m_cpu->executeNextInstruction();
-    }
-
-    executedCycles = executedCycles - elapsedCPUCycles;
+    m_timer->update(deltaTimeSeconds);
+    m_cpu->update(deltaTimeSeconds);
 
     start = std::chrono::high_resolution_clock::now();
 }

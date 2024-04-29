@@ -60,11 +60,34 @@ CPU::~CPU()
 {
 }
 
-uint64_t CPU::executeNextInstruction()
+static uint64_t executedCycles = 0;
+void CPU::update(double deltaTimeSeconds)
 {
+    uint64_t elapsedCPUCycles = static_cast<uint64_t>(CPU::FrequencyHz * deltaTimeSeconds);
+
+    while (executedCycles < elapsedCPUCycles)
+    {
+        executedCycles += executeInstruction();
+    }
+
+    // We could have executed more instructions than necessary
+    // In that case we need to remember how many cycles we went over
+    // so that next time we execute less instructions
+    executedCycles = executedCycles - elapsedCPUCycles;
+}
+
+void CPU::requestInterrupt(Interrupt interrupt)
+{
+    m_memory[0xFF0F] |= (1 << interrupt);
+}
+
+uint64_t CPU::executeInstruction()
+{
+    jumpToInterruptIfAnyPending();
+
     uint8_t opcode = m_memory[m_registers.PC++];
 
-#ifdef EMULATOR_DEBUG
+#if 0
     OutputDebugStringA("Executing opcode: ");
     OutputDebugStringA(std::format("{:x}", opcode).c_str());
     OutputDebugStringA("\n");
@@ -2096,11 +2119,6 @@ uint64_t CPU::executeNextInstruction()
         return 0;
         break;
     }
-}
-
-void CPU::requestInterrupt(Interrupt interrupt)
-{
-    m_memory[0xFF0F] |= (1 << interrupt);
 }
 
 void CPU::jumpToInterruptIfAnyPending()
