@@ -28,6 +28,7 @@ using namespace Microsoft::WRL;
 
 // Emulator
 #include "Emulator.h"
+#include "Memory.h"
 
 struct Vertex
 {

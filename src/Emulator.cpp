@@ -9,6 +9,7 @@
 #include "CPU.h"
 #include "Timer.h"
 #include "LCD.h"
+#include "Memory.h"
 
 std::chrono::steady_clock::time_point start;
 std::chrono::steady_clock::time_point end;
@@ -36,9 +37,10 @@ void Emulator::openCartridgeFile(char const* cartridgeFilename)
         .m_type = m_cartridge[0x147],
     };
 
-    m_cpu = std::make_unique<CPU>(m_cartridge.get(), m_cartridgeSize);
-    m_timer = std::make_unique<Timer>(m_cpu.get());
-    m_lcd = std::make_unique<LCD>(m_cpu.get(), m_frameTexture);
+    m_memory = std::make_unique<Memory>(m_cartridge.get(), m_cartridgeSize);
+    m_cpu = std::make_unique<CPU>(m_memory.get());
+    m_timer = std::make_unique<Timer>(m_cpu.get(), m_memory.get());
+    m_lcd = std::make_unique<LCD>(m_cpu.get(), m_memory.get(), m_frameTexture);
 }
 
 void Emulator::emulate()

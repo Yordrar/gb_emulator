@@ -1,9 +1,11 @@
 #include "LCD.h"
 
 #include "CPU.h"
+#include "Memory.h"
 
-LCD::LCD(CPU* cpu, ResourceHandle frameTexture)
+LCD::LCD(CPU* cpu, Memory* memory, ResourceHandle frameTexture)
     : m_cpu(cpu)
+	, m_memory(memory)
 	, m_frameTexture(frameTexture)
     , m_timerCounter(0)
 	, m_currentLine(0)
@@ -16,14 +18,12 @@ LCD::~LCD()
 
 void LCD::update(double deltaTimeSeconds)
 {
-	uint8_t* memory = m_cpu->getMemory();
-
-	if (memory[0xFF44] != m_currentLine)
+	if (m_memory->read(0xFF44) != m_currentLine)
 	{
 		m_currentLine = 0;
 	}
 
-	uint8_t LCDStatusRegister = memory[0xFF41];
+	uint8_t LCDStatusRegister = m_memory->read(0xFF41);
 	uint8_t LYCLYInterruptEnable = (LCDStatusRegister & 0b01000000) >> 6;
 	uint8_t OAMInterruptEnable = (LCDStatusRegister & 0b00100000) >> 5;
 	uint8_t VBlankInterruptEnable = (LCDStatusRegister & 0b00010000) >> 4;
@@ -40,7 +40,7 @@ void LCD::update(double deltaTimeSeconds)
 		{
 			// Enter scanline mode 3
 			m_timerCounter = 0;
-			memory[0xFF41] = (memory[0xFF41] & 0b11111100) | 3;
+			m_memory->write(0xFF41, (m_memory->read(0xFF41) & 0b11111100) | 3);
 		}
 		break;
 
@@ -51,7 +51,7 @@ void LCD::update(double deltaTimeSeconds)
 		{
 			// Enter hblank
 			m_timerCounter = 0;
-			memory[0xFF41] = (memory[0xFF41] & 0b11111100);
+			m_memory->write(0xFF41, (m_memory->read(0xFF41) & 0b11111100));
 			if (HBlankInterruptEnable)
 			{
 				m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
@@ -71,7 +71,7 @@ void LCD::update(double deltaTimeSeconds)
 			if (m_currentLine == 143)
 			{
 				// Enter vblank
-				memory[0xFF41] = (memory[0xFF41] & 0b11111100) | 1;
+				m_memory->write(0xFF41, (m_memory->read(0xFF41) & 0b11111100) | 1);
 				if (VBlankInterruptEnable)
 				{
 					m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
@@ -81,7 +81,7 @@ void LCD::update(double deltaTimeSeconds)
 			}
 			else
 			{
-				memory[0xFF41] = (memory[0xFF41] & 0b11111100) | 2;
+				m_memory->write(0xFF41, (m_memory->read(0xFF41) & 0b11111100) | 2);
 				if (OAMInterruptEnable)
 				{
 					m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
@@ -100,7 +100,7 @@ void LCD::update(double deltaTimeSeconds)
 			if (m_currentLine > 153)
 			{
 				// Restart scanning modes
-				memory[0xFF41] = (memory[0xFF41] & 0b11111100) | 2;
+				m_memory->write(0xFF41, (m_memory->read(0xFF41) & 0b11111100) | 2);
 				if (OAMInterruptEnable)
 				{
 					m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
@@ -112,12 +112,12 @@ void LCD::update(double deltaTimeSeconds)
 	}
 
 	// Update LY
-	memory[0xFF44] = m_currentLine;
+	m_memory->write(0xFF44, m_currentLine);
 
 	// Request interrupt if LYC==LY and is enabled
-	if (memory[0xFF44] == memory[0xFF45])
+	if (m_memory->read(0xFF44) == m_memory->read(0xFF45))
 	{
-		memory[0xFF41] |= (1 << 2);
+		m_memory->write(0xFF41, m_memory->read(0xFF41) | (1 << 2));
 		if (LYCLYInterruptEnable)
 		{
 			m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
@@ -125,6 +125,6 @@ void LCD::update(double deltaTimeSeconds)
 	}
 	else
 	{
-		memory[0xFF41] &= ~(1 << 2);
+		m_memory->write(0xFF41, m_memory->read(0xFF41) & ~(1 << 2));
 	}
 }

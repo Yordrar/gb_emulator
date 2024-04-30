@@ -9,6 +9,7 @@
 class CPU;
 class Timer;
 class LCD;
+class Memory;
 
 class Emulator
 {
@@ -34,6 +35,7 @@ private:
     size_t m_cartridgeSize;
     CartridgeInfo m_cartridgeInfo;
 
+    std::unique_ptr<Memory> m_memory;
     std::unique_ptr<CPU> m_cpu;
     std::unique_ptr<Timer> m_timer;
     std::unique_ptr<LCD> m_lcd;
