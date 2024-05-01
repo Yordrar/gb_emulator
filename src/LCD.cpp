@@ -3,10 +3,11 @@
 #include "CPU.h"
 #include "Memory.h"
 
-LCD::LCD(CPU* cpu, Memory* memory, ResourceHandle frameTexture)
+LCD::LCD(CPU* cpu, Memory* memory, ResourceHandle frameTexture, uint8_t* frameTextureData)
     : m_cpu(cpu)
 	, m_memory(memory)
 	, m_frameTexture(frameTexture)
+	, m_frameTextureData(frameTextureData)
     , m_timerCounter(0)
 	, m_currentLine(0)
 {
@@ -57,7 +58,7 @@ void LCD::update(double deltaTimeSeconds)
 				m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
 			}
 
-			// TODO Write a scanline to the framebuffer
+			writeScanlineToFrame();
 		}
 		break;
 
@@ -77,7 +78,7 @@ void LCD::update(double deltaTimeSeconds)
 					m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
 					m_cpu->requestInterrupt(CPU::Interrupt::VBlank);
 				}
-				// TODO After the last hblank, push the screen data to canvas
+				m_frameTexture.setNeedsCopyToGPU();
 			}
 			else
 			{
@@ -92,7 +93,7 @@ void LCD::update(double deltaTimeSeconds)
 
 		// Vblank (10 lines)
 	case 1:
-		if (m_timerCounter >= 456)
+		if (m_timerCounter >= 4560)
 		{
 			m_timerCounter = 0;
 			m_currentLine++;
@@ -126,5 +127,43 @@ void LCD::update(double deltaTimeSeconds)
 	else
 	{
 		m_memory->write(0xFF41, m_memory->read(0xFF41) & ~(1 << 2));
+	}
+}
+
+void LCD::writeScanlineToFrame()
+{
+	if ((m_memory->read(0xFF40) & 0b10000000) == 0)
+	{
+		return;
+	}
+
+	// Read LCD control register
+	uint8_t LCDC = m_memory->read(0xFF40);
+	uint8_t LCDDisplayEnable = (LCDC & 128) >> 7;		// (0=Off, 1=On)
+	uint8_t WindowTileMapSelect = (LCDC & 64) >> 6;		// (0=9800-9BFF, 1=9C00-9FFF)
+	uint8_t WindowDisplayEnable = (LCDC & 32) >> 5;		// (0=Off, 1=On)
+	uint8_t BGWindowTileDataSelect = (LCDC & 16) >> 4;	// (0=8800-97FF, 1=8000-8FFF)
+	uint8_t BGTileMapDisplaySelect = (LCDC & 8) >> 3;	// (0=9800-9BFF, 1=9C00-9FFF)
+	uint8_t SpriteSize = (LCDC & 4) >> 2;				// (0=8x8, 1=8x16)
+	uint8_t SpriteDisplayEnable = (LCDC & 2) >> 1;		// (0=Off, 1=On)
+	uint8_t BGDisplay = (LCDC & 1);						// (0=Off, 1=On)
+
+	uint8_t SCX = m_memory->read(0xFF43);
+	uint8_t SCY = m_memory->read(0xFF42);
+	uint8_t paletteColors = m_memory->read(0xFF47);
+
+	int bgmX = SCX;
+	int bgmY = (SCY + m_currentLine) % 256;
+	for (uint32_t i = 0; i < 144; i++)
+	{
+		for (uint32_t j = 0; j < 160; j++)
+		{
+			//uint8_t color = bgm[(i * 160 + j)]*255;
+			uint8_t color = m_memory->read(0x9800 + (i * 160 + j));
+			m_frameTextureData[(i * 160 + j) * 4] = color;
+			m_frameTextureData[(i * 160 + j) * 4 + 1] = color;
+			m_frameTextureData[(i * 160 + j) * 4 + 2] = color;
+			m_frameTextureData[(j * 160 + j) * 4 + 3] = 0;
+		}
 	}
 }

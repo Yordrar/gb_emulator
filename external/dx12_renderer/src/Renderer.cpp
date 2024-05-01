@@ -323,7 +323,7 @@ void Renderer::endFrame()
     m_graphicsCmdQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)m_graphicsCommandLists[m_numGraphicsCommandListsUsed-1].GetAddressOf());
     m_graphicsCmdQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)m_postFrameCommandList.GetAddressOf());
 
-    m_swapChain->Present( 1, 0 );
+    m_swapChain->Present( 0, 0 );
 
     // Schedule a Signal command in the queue
     uint64_t const currentFenceValue = m_frameFenceValues[ m_currentBackBufferIndex ];

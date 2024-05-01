@@ -15,10 +15,10 @@ CPU::CPU(Memory* memory)
 {
     m_registers =
     {
-        .AF = 0x01B0,
-        .BC = 0x0013,
-        .DE = 0x00D8,
-        .HL = 0x014D,
+        .AF = 0x0100,
+        .BC = 0x0014,
+        .DE = 0x0000,
+        .HL = 0xC060,
         .SP = 0xFFFE,
     };
     m_registers.PC = 0x100;
@@ -86,7 +86,6 @@ uint64_t CPU::executeInstruction()
 
     uint8_t opcode = m_memory->read(m_registers.PC++);
 
-    //OutputDebugStringA("Executing opcode: ");
     //OutputDebugStringA(std::format("{:x}\n", opcode).c_str());
     
     uint16_t address = 0;
@@ -108,7 +107,7 @@ uint64_t CPU::executeInstruction()
         switch (n)
         {
         case 0x37:
-            m_registers.A = ((m_registers.A & 0xF0) >> 4) | (m_registers.A & 0x0F << 4);
+            m_registers.A = ((m_registers.A & 0xF0) >> 4) | ((m_registers.A & 0x0F) << 4);
             m_registers.F = 0;
             if (m_registers.A == 0)
             {
@@ -117,7 +116,7 @@ uint64_t CPU::executeInstruction()
             return 8;
             break;
         case 0x30:
-            m_registers.B = ((m_registers.B & 0xF0) >> 4) | (m_registers.B & 0x0F << 4);
+            m_registers.B = ((m_registers.B & 0xF0) >> 4) | ((m_registers.B & 0x0F) << 4);
             m_registers.F = 0;
             if (m_registers.B == 0)
             {
@@ -126,7 +125,7 @@ uint64_t CPU::executeInstruction()
             return 8;
             break;
         case 0x31:
-            m_registers.C = ((m_registers.C & 0xF0) >> 4) | (m_registers.C & 0x0F << 4);
+            m_registers.C = ((m_registers.C & 0xF0) >> 4) | ((m_registers.C & 0x0F) << 4);
             m_registers.F = 0;
             if (m_registers.C == 0)
             {
@@ -135,7 +134,7 @@ uint64_t CPU::executeInstruction()
             return 8;
             break;
         case 0x32:
-            m_registers.D = ((m_registers.D & 0xF0) >> 4) | (m_registers.D & 0x0F << 4);
+            m_registers.D = ((m_registers.D & 0xF0) >> 4) | ((m_registers.D & 0x0F) << 4);
             m_registers.F = 0;
             if (m_registers.D == 0)
             {
@@ -144,36 +143,38 @@ uint64_t CPU::executeInstruction()
             return 8;
             break;
         case 0x33:
-            m_registers.E = ((m_registers.E & 0xF0) >> 4) | (m_registers.E & 0x0F << 4);
+            m_registers.E = ((m_registers.E & 0xF0) >> 4) | ((m_registers.E & 0x0F) << 4);
             m_registers.F = 0;
-            if (m_registers.A == 0)
+            if (m_registers.E == 0)
             {
                 m_registers.F |= 0b10000000;
             }
             return 8;
             break;
         case 0x34:
-            m_registers.H = ((m_registers.H & 0xF0) >> 4) | (m_registers.H & 0x0F << 4);
+            m_registers.H = ((m_registers.H & 0xF0) >> 4) | ((m_registers.H & 0x0F) << 4);
             m_registers.F = 0;
-            if (m_registers.A == 0)
+            if (m_registers.H == 0)
             {
                 m_registers.F |= 0b10000000;
             }
             return 8;
             break;
         case 0x35:
-            m_registers.L = ((m_registers.L & 0xF0) >> 4) | (m_registers.L & 0x0F << 4);
+            m_registers.L = ((m_registers.L & 0xF0) >> 4) | ((m_registers.L & 0x0F) << 4);
             m_registers.F = 0;
-            if (m_registers.A == 0)
+            if (m_registers.L == 0)
             {
                 m_registers.F |= 0b10000000;
             }
             return 8;
             break;
         case 0x36:
-            m_memory->write(m_registers.HL, ((m_memory->read(m_registers.HL) & 0xF0) >> 4) | (m_memory->read(m_registers.HL) & 0x0F << 4));
+            n = m_memory->read(m_registers.HL);
+            n = ((n & 0xF0) >> 4) | ((n & 0x0F) << 4);
+            m_memory->write(m_registers.HL, n);
             m_registers.F = 0;
-            if (m_memory->read(m_registers.HL) == 0)
+            if (n == 0)
             {
                 m_registers.F |= 0b10000000;
             }
@@ -659,7 +660,7 @@ uint64_t CPU::executeInstruction()
         break;
     case 0x76:
         m_registers.PC--;
-        return 0;
+        return 4;
         break;
     case 0x10:
         // This is the STOP instruction which
@@ -667,7 +668,7 @@ uint64_t CPU::executeInstruction()
         // Technically not correct, but eh, should be fine
         // TODO maybe fix this in the future
         m_registers.PC--;
-        return 0;
+        return 4;
         break;
     case 0xF3:
         m_interruptMasterEnableFlag = false;
@@ -940,7 +941,7 @@ uint64_t CPU::executeInstruction()
         return 8;
         break;
     case 0xFA:
-        m_registers.A = m_memory->read((m_memory->read(m_registers.PC++) >> 0) | (m_memory->read(m_registers.PC++) << 8));
+        m_registers.A = m_memory->read(((uint16_t)(m_memory->read(m_registers.PC++)) >> 0) | ((uint16_t)(m_memory->read(m_registers.PC++)) << 8));
         return 16;
         break;
     case 0x3E:
@@ -984,7 +985,7 @@ uint64_t CPU::executeInstruction()
         return 8;
         break;
     case 0xEA:
-        m_memory->write((m_memory->read(m_registers.PC++) >> 0) | (m_memory->read(m_registers.PC++) << 8), m_registers.A);
+        m_memory->write(((uint16_t)(m_memory->read(m_registers.PC++)) >> 0) | ((uint16_t)(m_memory->read(m_registers.PC++)) << 8), m_registers.A);
         return 16;
         break;
     case 0xF2:
@@ -1026,19 +1027,19 @@ uint64_t CPU::executeInstruction()
 
     // 16-bit load operations
     case 0x01:
-        m_registers.BC = (m_memory->read(m_registers.PC++) >> 0) | (m_memory->read(m_registers.PC++) << 8);
+        m_registers.BC = (m_memory->read(m_registers.PC++) >> 0) | ((uint16_t)(m_memory->read(m_registers.PC++)) << 8);
         return 12;
         break;
     case 0x11:
-        m_registers.DE = (m_memory->read(m_registers.PC++) >> 0) | (m_memory->read(m_registers.PC++) << 8);
+        m_registers.DE = (m_memory->read(m_registers.PC++) >> 0) | ((uint16_t)(m_memory->read(m_registers.PC++)) << 8);
         return 12;
         break;
     case 0x21:
-        m_registers.HL = (m_memory->read(m_registers.PC++) >> 0) | (m_memory->read(m_registers.PC++) << 8);
+        m_registers.HL = (m_memory->read(m_registers.PC++) >> 0) | ((uint16_t)(m_memory->read(m_registers.PC++)) << 8);
         return 12;
         break;
     case 0x31:
-        m_registers.SP = (m_memory->read(m_registers.PC++) >> 0) | (m_memory->read(m_registers.PC++) << 8);
+        m_registers.SP = (m_memory->read(m_registers.PC++) >> 0) | ((uint16_t)(m_memory->read(m_registers.PC++)) << 8);
         return 12;
         break;
     case 0xF9:
@@ -1052,49 +1053,49 @@ uint64_t CPU::executeInstruction()
         return 12;
         break;
     case 0x08:
-        address = (m_memory->read(m_registers.PC++) >> 0) | (m_memory->read(m_registers.PC++) << 8);
-        m_memory->write(address, m_registers.SP & 0xFF);
-        m_memory->write(address+1, m_registers.SP >> 8);
+        address = (m_memory->read(m_registers.PC++) >> 0) | ((uint16_t)(m_memory->read(m_registers.PC++)) << 8);
+        m_memory->write(address, m_registers.SP >> 8);
+        m_memory->write(address+1, m_registers.SP & 0xFF);
         return 20;
         break;
     case 0xF5:
-        m_memory->write(m_registers.SP--, m_registers.F);
-        m_memory->write(m_registers.SP--, m_registers.A);
+        m_memory->write(--m_registers.SP, m_registers.A);
+        m_memory->write(--m_registers.SP, m_registers.F);
         return 16;
         break;
     case 0xC5:
-        m_memory->write(m_registers.SP--, m_registers.C);
-        m_memory->write(m_registers.SP--, m_registers.B);
+        m_memory->write(--m_registers.SP, m_registers.B);
+        m_memory->write(--m_registers.SP, m_registers.C);
         return 16;
         break;
     case 0xD5:
-        m_memory->write(m_registers.SP--, m_registers.E);
-        m_memory->write(m_registers.SP--, m_registers.D);
+        m_memory->write(--m_registers.SP, m_registers.D);
+        m_memory->write(--m_registers.SP, m_registers.E);
         return 16;
         break;
     case 0xE5:
-        m_memory->write(m_registers.SP--, m_registers.L);
-        m_memory->write(m_registers.SP--, m_registers.H);
+        m_memory->write(--m_registers.SP, m_registers.H);
+        m_memory->write(--m_registers.SP, m_registers.L);
         return 16;
         break;
     case 0xF1:
-        m_registers.A = m_memory->read(++m_registers.SP);
-        m_registers.F = m_memory->read(++m_registers.SP);
+        m_registers.F = m_memory->read(m_registers.SP++);
+        m_registers.A = m_memory->read(m_registers.SP++);
         return 12;
         break;
     case 0xC1:
-        m_registers.B = m_memory->read(++m_registers.SP);
-        m_registers.C = m_memory->read(++m_registers.SP);
+        m_registers.C = m_memory->read(m_registers.SP++);
+        m_registers.B = m_memory->read(m_registers.SP++);
         return 12;
         break;
     case 0xD1:
-        m_registers.D = m_memory->read(++m_registers.SP);
-        m_registers.E = m_memory->read(++m_registers.SP);
+        m_registers.E = m_memory->read(m_registers.SP++);
+        m_registers.D = m_memory->read(m_registers.SP++);
         return 12;
         break;
     case 0xE1:
-        m_registers.H = m_memory->read(++m_registers.SP);
-        m_registers.L = m_memory->read(++m_registers.SP);
+        m_registers.L = m_memory->read(m_registers.SP++);
+        m_registers.H = m_memory->read(m_registers.SP++);
         return 12;
         break;
 
@@ -1135,8 +1136,9 @@ uint64_t CPU::executeInstruction()
         return 4;
         break;
     case 0x86:
-        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_memory->read(m_registers.HL));
-        m_registers.A += m_memory->read(m_registers.HL);
+        n = m_memory->read(m_registers.HL);
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, n);
+        m_registers.A += n;
         return 8;
         break;
     case 0xC6:
@@ -1711,16 +1713,17 @@ uint64_t CPU::executeInstruction()
         return 4;
         break;
     case 0x34:
-        if (m_memory->read(m_registers.HL) + 1 == 0)
+        n = m_memory->read(m_registers.HL);
+        if (n + 1 == 0)
         {
             m_registers.F |= 0b10000000;
         }
         m_registers.F &= 0b10111111;
-        if ((m_memory->read(m_registers.HL) & 0x0F) + 1 > 0x0F)
+        if ((n & 0x0F) + 1 > 0x0F)
         {
             m_registers.F |= 0b00100000;
         }
-        m_memory->write(m_registers.HL, m_memory->read(m_registers.HL) + 1);
+        m_memory->write(m_registers.HL, n + 1);
         return 12;
         break;
     case 0x3D:
@@ -1815,16 +1818,17 @@ uint64_t CPU::executeInstruction()
         return 4;
         break;
     case 0x35:
-        if (m_memory->read(m_registers.HL) - 1 == 0)
+        n = m_memory->read(m_registers.HL);
+        if (n - 1 == 0)
         {
             m_registers.F |= 0b10000000;
         }
         m_registers.F |= 0b01000000;
-        if ((m_memory->read(m_registers.HL) & 0xF) == 0)
+        if ((n & 0xF) == 0)
         {
             m_registers.F |= 0b00100000;
         }
-        m_memory->write(m_registers.HL, m_memory->read(m_registers.HL) - 1);
+        m_memory->write(m_registers.HL, n - 1);
         return 12;
         break;
 
@@ -1851,7 +1855,7 @@ uint64_t CPU::executeInstruction()
         break;
     case 0xE8:
         n = m_memory->read(m_registers.PC++);
-        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.SP&0xFF, n)&0b00111111;
+        m_registers.F = getCarryFlagsFor16BitAddition(m_registers.SP, n)&0b00111111;
         m_registers.SP += n;
         return 16;
         break;
@@ -1908,44 +1912,48 @@ uint64_t CPU::executeInstruction()
 
         // Jump operations
     case 0xC3:
-        m_registers.PC = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | uint16_t(m_memory->read(m_registers.PC++) << 8);
+        m_registers.PC = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | (uint16_t(m_memory->read(m_registers.PC++)) << 8);
         return 12;
         break;
     case 0xC2:
         n = (m_registers.F & 0b10000000) >> 7;
         if (n == 0)
         {
-            m_registers.PC = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | uint16_t(m_memory->read(m_registers.PC++) << 8);
-            return 12;
+            m_registers.PC = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | (uint16_t(m_memory->read(m_registers.PC++)) << 8);
+            return 16;
         }
-        return 8;
+        m_registers.PC += 2;
+        return 12;
         break;
     case 0xCA:
         n = (m_registers.F & 0b10000000) >> 7;
         if (n == 1)
         {
-            m_registers.PC = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | uint16_t(m_memory->read(m_registers.PC++) << 8);
-            return 12;
+            m_registers.PC = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | (uint16_t(m_memory->read(m_registers.PC++)) << 8);
+            return 16;
         }
-        return 8;
+        m_registers.PC += 2;
+        return 12;
         break;
     case 0xD2:
         n = (m_registers.F & 0b00010000) >> 4;
         if (n == 0)
         {
             m_registers.PC = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | uint16_t(m_memory->read(m_registers.PC++) << 8);
-            return 12;
+            return 16;
         }
-        return 8;
+        m_registers.PC += 2;
+        return 12;
         break;
     case 0xDA:
         n = (m_registers.F & 0b00010000) >> 4;
         if (n == 1)
         {
             m_registers.PC = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | uint16_t(m_memory->read(m_registers.PC++) << 8);
-            return 12;
+            return 16;
         }
-        return 8;
+        m_registers.PC += 2;
+        return 12;
         break;
     case 0xE9:
         m_registers.PC = m_registers.HL;
@@ -1999,8 +2007,8 @@ uint64_t CPU::executeInstruction()
         // Call operations
     case 0xCD:
         address = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | uint16_t(m_memory->read(m_registers.PC++) << 8);
-        m_memory->write(m_registers.SP--, uint8_t(m_registers.PC & 0x00FF));
-        m_memory->write(m_registers.SP--, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_registers.PC = address;
         return 24;
         break;
@@ -2009,11 +2017,12 @@ uint64_t CPU::executeInstruction()
         if (n == 0)
         {
             address = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | uint16_t(m_memory->read(m_registers.PC++) << 8);
-            m_memory->write(m_registers.SP--, uint8_t(m_registers.PC & 0x00FF));
-            m_memory->write(m_registers.SP--, uint8_t((m_registers.PC & 0xFF00) >> 8));
+            m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+            m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
             m_registers.PC = address;
             return 24;
         }
+        m_registers.PC += 2;
         return 12;
         break;
     case 0xCC:
@@ -2021,11 +2030,12 @@ uint64_t CPU::executeInstruction()
         if (n == 1)
         {
             address = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | uint16_t(m_memory->read(m_registers.PC++) << 8);
-            m_memory->write(m_registers.SP--, uint8_t(m_registers.PC & 0x00FF));
-            m_memory->write(m_registers.SP--, uint8_t((m_registers.PC & 0xFF00) >> 8));
+            m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+            m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
             m_registers.PC = address;
             return 24;
         }
+        m_registers.PC += 2;
         return 12;
         break;
     case 0xD4:
@@ -2033,11 +2043,12 @@ uint64_t CPU::executeInstruction()
         if (n == 0)
         {
             address = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | uint16_t(m_memory->read(m_registers.PC++) << 8);
-            m_memory->write(m_registers.SP--, uint8_t(m_registers.PC & 0x00FF));
-            m_memory->write(m_registers.SP--, uint8_t((m_registers.PC & 0xFF00) >> 8));
+            m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+            m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
             m_registers.PC = address;
             return 24;
         }
+        m_registers.PC += 2;
         return 12;
         break;
     case 0xDC:
@@ -2045,26 +2056,27 @@ uint64_t CPU::executeInstruction()
         if (n == 1)
         {
             address = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | uint16_t(m_memory->read(m_registers.PC++) << 8);
-            m_memory->write(m_registers.SP--, uint8_t(m_registers.PC & 0x00FF));
-            m_memory->write(m_registers.SP--, uint8_t((m_registers.PC & 0xFF00) >> 8));
+            m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+            m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
             m_registers.PC = address;
             return 24;
         }
+        m_registers.PC += 2;
         return 12;
         break;
 
         // Returns
     case 0xC9:
-        m_registers.PC = uint16_t(m_memory->read(++m_registers.SP)) << 8;
-        m_registers.PC |= uint16_t(m_memory->read(++m_registers.SP));
+        m_registers.PC = uint16_t(m_memory->read(m_registers.SP++));
+        m_registers.PC |= uint16_t(m_memory->read(m_registers.SP++)) << 8;
         return 16;
         break;
     case 0xC0:
         n = (m_registers.F & 0b10000000) >> 7;
         if (n == 0)
         {
-            m_registers.PC = uint16_t(m_memory->read(++m_registers.SP)) << 8;
-            m_registers.PC |= uint16_t(m_memory->read(++m_registers.SP));
+            m_registers.PC = uint16_t(m_memory->read(m_registers.SP++));
+            m_registers.PC |= uint16_t(m_memory->read(m_registers.SP++)) << 8;
             return 20;
         }
         return 8;
@@ -2073,8 +2085,8 @@ uint64_t CPU::executeInstruction()
         n = (m_registers.F & 0b10000000) >> 7;
         if (n == 1)
         {
-            m_registers.PC = uint16_t(m_memory->read(++m_registers.SP)) << 8;
-            m_registers.PC |= uint16_t(m_memory->read(++m_registers.SP));
+            m_registers.PC = uint16_t(m_memory->read(m_registers.SP++));
+            m_registers.PC |= uint16_t(m_memory->read(m_registers.SP++)) << 8;
             return 20;
         }
         return 8;
@@ -2083,8 +2095,8 @@ uint64_t CPU::executeInstruction()
         n = (m_registers.F & 0b00010000) >> 4;
         if (n == 0)
         {
-            m_registers.PC = uint16_t(m_memory->read(++m_registers.SP)) << 8;
-            m_registers.PC |= uint16_t(m_memory->read(++m_registers.SP));
+            m_registers.PC = uint16_t(m_memory->read(m_registers.SP++));
+            m_registers.PC |= uint16_t(m_memory->read(m_registers.SP++)) << 8;
             return 20;
         }
         return 8;
@@ -2093,15 +2105,15 @@ uint64_t CPU::executeInstruction()
         n = (m_registers.F & 0b00010000) >> 4;
         if (n == 1)
         {
-            m_registers.PC = uint16_t(m_memory->read(++m_registers.SP)) << 8;
-            m_registers.PC |= uint16_t(m_memory->read(++m_registers.SP));
+            m_registers.PC = uint16_t(m_memory->read(m_registers.SP++));
+            m_registers.PC |= uint16_t(m_memory->read(m_registers.SP++)) << 8;
             return 20;
         }
         return 8;
         break;
     case 0xD9:
-        m_registers.PC = uint16_t(m_memory->read(++m_registers.SP)) << 8;
-        m_registers.PC |= uint16_t(m_memory->read(++m_registers.SP));
+        m_registers.PC = uint16_t(m_memory->read(m_registers.SP++));
+        m_registers.PC |= uint16_t(m_memory->read(m_registers.SP++)) << 8;
         m_interruptMasterEnableFlag = true;
         return 16;
         break;
@@ -2124,6 +2136,12 @@ void CPU::jumpToInterruptIfAnyPending()
         return;
     }
 
+    // if machine is halted, we return to the next instruction after the halt
+    if (m_memory->read(m_registers.PC) == 0x76)
+    {
+        m_registers.PC++;
+    }
+
     uint8_t interruptFlag = m_memory->read(0xFF0F);
     uint8_t interruptEnable = m_memory->read(0xFFFF);
 
@@ -2133,8 +2151,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_memory->write(0xFF0F, interruptFlag & ~1);
         m_interruptMasterEnableFlag = false;
 
-        m_memory->write(m_registers.SP--, uint8_t(m_registers.PC & 0x0F));
-        m_memory->write(m_registers.SP--, uint8_t((m_registers.PC & 0xF0) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_registers.PC = 0x0040;
     }
 
@@ -2144,8 +2162,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_memory->write(0xFF0F, interruptFlag & ~2);
         m_interruptMasterEnableFlag = false;
 
-        m_memory->write(m_registers.SP--, uint8_t(m_registers.PC & 0x0F));
-        m_memory->write(m_registers.SP--, uint8_t((m_registers.PC & 0xF0) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_registers.PC = 0x0048;
     }
 
@@ -2155,8 +2173,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_memory->write(0xFF0F, interruptFlag & ~4);
         m_interruptMasterEnableFlag = false;
 
-        m_memory->write(m_registers.SP--, uint8_t(m_registers.PC & 0x0F));
-        m_memory->write(m_registers.SP--, uint8_t((m_registers.PC & 0xF0) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_registers.PC = 0x0050;
     }
 
@@ -2166,8 +2184,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_memory->write(0xFF0F, interruptFlag & ~8);
         m_interruptMasterEnableFlag = false;
 
-        m_memory->write(m_registers.SP--, uint8_t(m_registers.PC & 0x0F));
-        m_memory->write(m_registers.SP--, uint8_t((m_registers.PC & 0xF0) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_registers.PC = 0x0058;
     }
 
@@ -2177,8 +2195,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_memory->write(0xFF0F, interruptFlag & ~16);
         m_interruptMasterEnableFlag = false;
 
-        m_memory->write(m_registers.SP--, uint8_t(m_registers.PC & 0x0F));
-        m_memory->write(m_registers.SP--, uint8_t((m_registers.PC & 0xF0) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_registers.PC = 0x0060;
     }
 }
@@ -2227,7 +2245,7 @@ uint8_t CPU::getCarryFlagsFor16BitAddition(uint16_t op1, uint16_t op2)
     {
         newFlag |= 0b00010000;
     }
-    if (((op1 & 0x0F00) + (op2 & 0x0F00)) > 0x0F00)
+    if (((op1 & 0x0F) + (op2 & 0x0F)) > 0x0F00)
     {
         newFlag |= 0b00100000;
     }
@@ -2348,7 +2366,7 @@ void CPU::shiftRegisterRightLogically(uint8_t& reg)
 
 void CPU::testBitInRegister(uint8_t bit, uint8_t& reg)
 {
-    uint8_t extractedBit = (reg & (1 << bit)) >> bit;
+    uint8_t extractedBit = (reg & (1 << bit));
     uint8_t newFlag = 0b00100000;
     if (extractedBit == 0)
     {

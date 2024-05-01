@@ -220,6 +220,12 @@ void* ResourceManager::getResourceDataPtr(ResourceHandle handle)
     return (void*)m_resources[handle.m_index].m_resource.m_subresourceData.pData;
 }
 
+bool ResourceManager::getResourceNeedsCopyToGPU(ResourceHandle handle)
+{
+    assert(isResourceHandleValid(handle));
+    return m_resources[handle.m_index].m_resource.m_needsCopyToGPU;
+}
+
 void ResourceManager::setResourceNeedsCopyToGPU(ResourceHandle handle)
 {
     assert(isResourceHandleValid(handle));

@@ -12,6 +12,7 @@ using namespace Microsoft::WRL;
 
 // Std
 #include <string>
+#include <chrono>
 
 // Renderer
 #include <Utils.h>
@@ -126,7 +127,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     fstMesh->setVertexBuffer(vertexBuffer.data(), sizeof(Vertex), static_cast<UINT>(vertexBuffer.size()));
     scene->addMesh(fstMesh);
 
-    Emulator emulator(frameTexture);
+    Emulator emulator(frameTexture, frameTextureData);
     if (lstrcmpW(pCmdLine, L"") != 0)
     {
         emulator.openCartridgeFile(WideStrToStr(pCmdLine).c_str());
@@ -154,10 +155,13 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     {
         emulator.emulate();
 
-        renderer->beginFrame();
-        renderer->submitRenderPass(mainPass, *scene, { &scene->getCamera() });
-        renderer->submitImGui();
-        renderer->endFrame();
+        if (ResourceManager::it().getResourceNeedsCopyToGPU(frameTexture))
+        {
+            renderer->beginFrame();
+            renderer->submitRenderPass(mainPass, *scene, { &scene->getCamera() });
+            renderer->submitImGui();
+            renderer->endFrame();
+        }
     }
 
     renderer->waitForIdleGPU();

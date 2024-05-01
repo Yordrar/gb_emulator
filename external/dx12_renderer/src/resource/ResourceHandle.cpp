@@ -147,6 +147,11 @@ Descriptor const& ResourceHandle::getDepthStencilView(D3D12_DEPTH_STENCIL_VIEW_D
     return ResourceManager::it().getDepthStencilView(*this, dsvDesc);
 }
 
+void ResourceHandle::setNeedsCopyToGPU()
+{
+    ResourceManager::it().setResourceNeedsCopyToGPU(*this);
+}
+
 D3D12_CONSTANT_BUFFER_VIEW_DESC ResourceHandle::getDefaultCBVDesc()
 {
     D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc =

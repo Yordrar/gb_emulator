@@ -14,7 +14,7 @@ class Memory;
 class Emulator
 {
 public:
-    Emulator(ResourceHandle frameTexture);
+    Emulator(ResourceHandle frameTexture, uint8_t* frameTextureData);
     ~Emulator();
 
     struct CartridgeInfo
@@ -30,6 +30,7 @@ public:
 
 private:
     ResourceHandle m_frameTexture;
+    uint8_t* m_frameTextureData;
 
     std::unique_ptr<uint8_t[]> m_cartridge;
     size_t m_cartridgeSize;

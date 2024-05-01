@@ -35,6 +35,8 @@ public:
     Descriptor const& getRenderTargetView(D3D12_RENDER_TARGET_VIEW_DESC const& rtvDesc);
     Descriptor const& getDepthStencilView(D3D12_DEPTH_STENCIL_VIEW_DESC const& dsvDesc);
 
+    void setNeedsCopyToGPU();
+
 private:
     D3D12_CONSTANT_BUFFER_VIEW_DESC getDefaultCBVDesc();
     D3D12_SHADER_RESOURCE_VIEW_DESC getDefaultSRVDesc();
