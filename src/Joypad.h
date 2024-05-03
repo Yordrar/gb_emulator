@@ -1,19 +1,28 @@
 #pragma once
 
+#include <Windows.h>
 #include <cstdint>
 
-class CPU;
 class Memory;
 
 class Joypad
 {
 public:
-    Joypad(CPU* cpu, Memory* memory);
+    Joypad(Memory* memory);
     ~Joypad();
 
-    void update(double deltaTimeSeconds);
+    bool updateJOYP();
+    void processInput(WPARAM wParam, LPARAM lParam);
 
 private:
-    CPU* m_cpu;
     Memory* m_memory;
+
+    uint8_t m_upPressed;
+    uint8_t m_downPressed;
+    uint8_t m_leftPressed;
+    uint8_t m_rightPressed;
+    uint8_t m_APressed;
+    uint8_t m_BPressed;
+    uint8_t m_startPressed;
+    uint8_t m_selectPressed;
 };

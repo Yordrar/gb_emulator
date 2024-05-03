@@ -28,6 +28,7 @@ public:
     CartridgeInfo getCartridgeInfo() const { return m_cartridgeInfo; }
 
     void emulate();
+    void processInput(WPARAM wParam, LPARAM lParam);
 
 private:
     ResourceHandle m_frameTexture;

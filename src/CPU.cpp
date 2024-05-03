@@ -3,16 +3,16 @@
 #include <Windows.h>
 #include <string>
 #include <format>
-#include <fstream>
 #include <cassert>
 #include <cstring>
 #include <cmath>
 
 #include "Memory.h"
+#include "Joypad.h"
 
-static std::fstream trace;
-CPU::CPU(Memory* memory)
+CPU::CPU(Memory* memory, Joypad* joypad)
     : m_memory(memory)
+    , m_joypad(joypad)
     , m_interruptMasterEnableFlag(true)
 {
     m_registers =
@@ -55,7 +55,6 @@ CPU::CPU(Memory* memory)
     memory->write(0xFF4A, 0x00); // WY
     memory->write(0xFF4B, 0x00); // WX
     memory->write(0xFFFF, 0x00); // IE
-    trace.open("trace.txt", std::fstream::out | std::fstream::trunc);
 }
 
 CPU::~CPU()
@@ -87,24 +86,14 @@ uint64_t CPU::executeInstruction()
 {
     jumpToInterruptIfAnyPending();
 
+    if (m_registers.PC == 0x0429)
+    {
+        //DebugBreak();
+    }
+
     uint8_t opcode = m_memory->read(m_registers.PC++);
 
     //OutputDebugStringA(std::format("{:x}: {:x}\n", m_registers.PC-1, opcode).c_str());
-
-    if (m_registers.PC == 0x6016)
-    {
-        //DebugBreak();
-    }
-
-    if (m_registers.PC == 0x0072)
-    {
-        //DebugBreak();
-    }
-
-    if (opcode == 0xCD)
-    {
-        //DebugBreak();
-    }
 
     uint16_t address = 0;
     uint8_t offset = 0;
@@ -1035,7 +1024,12 @@ uint64_t CPU::executeInstruction()
         return 8;
         break;
     case 0xE0:
-        m_memory->write(0xFF00 + m_memory->read(m_registers.PC++), m_registers.A);
+        offset = m_memory->read(m_registers.PC++);
+        m_memory->write(0xFF00 + offset, m_registers.A);
+        if (offset == 0x00 && m_joypad->updateJOYP())
+        {
+            requestInterrupt(Interrupt::JoyPad);
+        }
         return 12;
         break;
     case 0xF0:
@@ -2026,10 +2020,12 @@ void CPU::jumpToInterruptIfAnyPending()
         return;
     }
 
+    uint16_t PCAfterInterrupt = m_registers.PC;
+
     // if machine is halted, we return to the next instruction after the halt
     if (m_memory->read(m_registers.PC) == 0x76)
     {
-        m_registers.PC++;
+        PCAfterInterrupt++;
     }
 
     uint8_t interruptFlag = m_memory->read(0xFF0F);
@@ -2041,8 +2037,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_memory->write(0xFF0F, interruptFlag & ~1);
         m_interruptMasterEnableFlag = false;
 
-        m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
-        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
+        m_memory->write(--m_registers.SP, uint8_t((PCAfterInterrupt & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(PCAfterInterrupt & 0x00FF));
         m_registers.PC = 0x0040;
     }
 
@@ -2052,8 +2048,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_memory->write(0xFF0F, interruptFlag & ~2);
         m_interruptMasterEnableFlag = false;
 
-        m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
-        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
+        m_memory->write(--m_registers.SP, uint8_t((PCAfterInterrupt & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(PCAfterInterrupt & 0x00FF));
         m_registers.PC = 0x0048;
     }
 
@@ -2063,8 +2059,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_memory->write(0xFF0F, interruptFlag & ~4);
         m_interruptMasterEnableFlag = false;
 
-        m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
-        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
+        m_memory->write(--m_registers.SP, uint8_t((PCAfterInterrupt & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(PCAfterInterrupt & 0x00FF));
         m_registers.PC = 0x0050;
     }
 
@@ -2074,8 +2070,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_memory->write(0xFF0F, interruptFlag & ~8);
         m_interruptMasterEnableFlag = false;
 
-        m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
-        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
+        m_memory->write(--m_registers.SP, uint8_t((PCAfterInterrupt & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(PCAfterInterrupt & 0x00FF));
         m_registers.PC = 0x0058;
     }
 
@@ -2085,8 +2081,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_memory->write(0xFF0F, interruptFlag & ~16);
         m_interruptMasterEnableFlag = false;
 
-        m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
-        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
+        m_memory->write(--m_registers.SP, uint8_t((PCAfterInterrupt & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(PCAfterInterrupt & 0x00FF));
         m_registers.PC = 0x0060;
     }
 }

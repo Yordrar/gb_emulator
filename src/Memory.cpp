@@ -1,6 +1,9 @@
 #include "Memory.h"
 
+#include <Windows.h>
+
 #include <string>
+#include <algorithm>
 
 Memory::Memory(uint8_t* cartridge, size_t cartridgeSize)
     : m_cartridge(cartridge)
@@ -129,6 +132,24 @@ void Memory::write(size_t address, uint8_t value)
     if (address >= 0xE000 && address <= 0xFDFF)
     {
         address -= 0x2000;
+    }
+
+    //Joypad
+    if (address == 0xFF00)
+    {
+        uint8_t JOYP = read(0xFF00);
+        uint8_t newJOYP = (JOYP & 0b11001111) | value;
+        value = newJOYP;
+    }
+
+    // OAM DMA transfer
+    if (address == 0xFF46)
+    {
+        uint16_t sourceAddress = (uint16_t(std::clamp(static_cast<unsigned int>(value), 0u, 0xF1u)) << 8);
+        for (int i = 0; i <= 0x9F; i++)
+        {
+            write(0xFE00 | i, read(sourceAddress | i));
+        }
     }
 
     m_memory[address] = value;

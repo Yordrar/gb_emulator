@@ -25,5 +25,5 @@ private:
     uint8_t* m_frameTextureData;
 
     double m_timerCounter;
-    uint8_t m_currentLine;
+    int m_currentLine;
 };

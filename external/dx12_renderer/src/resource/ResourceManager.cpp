@@ -222,6 +222,10 @@ void* ResourceManager::getResourceDataPtr(ResourceHandle handle)
 
 bool ResourceManager::getResourceNeedsCopyToGPU(ResourceHandle handle)
 {
+    if (m_resources.size() == 0)
+    {
+        return false;
+    }
     assert(isResourceHandleValid(handle));
     return m_resources[handle.m_index].m_resource.m_needsCopyToGPU;
 }

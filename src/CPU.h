@@ -3,11 +3,12 @@
 #include <cstdint>
 
 class Memory;
+class Joypad;
 
 class CPU
 {
 public:
-    CPU(Memory* memory);
+    CPU(Memory* memory, Joypad* joypad);
     ~CPU();
 
     enum Interrupt
@@ -16,7 +17,7 @@ public:
         LCD_STAT,
         Timer,
         Serial,
-        Joypad,
+        JoyPad,
     };
 
     static const uint64_t FrequencyHz = 4 * 1024 * 1024;
@@ -93,4 +94,6 @@ private:
     bool m_interruptMasterEnableFlag;
 
     Memory* m_memory;
+
+    Joypad* m_joypad;
 };
