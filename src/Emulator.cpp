@@ -10,6 +10,7 @@
 #include "Timer.h"
 #include "LCD.h"
 #include "Memory.h"
+#include "Joypad.h"
 
 std::chrono::steady_clock::time_point start;
 std::chrono::steady_clock::time_point end;
@@ -42,6 +43,7 @@ void Emulator::openCartridgeFile(char const* cartridgeFilename)
     m_cpu = std::make_unique<CPU>(m_memory.get());
     m_timer = std::make_unique<Timer>(m_cpu.get(), m_memory.get());
     m_lcd = std::make_unique<LCD>(m_cpu.get(), m_memory.get(), m_frameTexture, m_frameTextureData);
+    m_joypad = std::make_unique<Joypad>(m_cpu.get(), m_memory.get());
 }
 
 void Emulator::emulate()
@@ -51,6 +53,7 @@ void Emulator::emulate()
     auto elapsedMilliseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     double deltaTimeSeconds = std::chrono::abs(elapsedMilliseconds).count() / 1000000000.0;
 
+    m_joypad->update(deltaTimeSeconds);
     m_timer->update(deltaTimeSeconds);
     m_lcd->update(deltaTimeSeconds);
     m_cpu->update(deltaTimeSeconds);

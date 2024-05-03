@@ -7,7 +7,7 @@ Memory::Memory(uint8_t* cartridge, size_t cartridgeSize)
     , m_cartridgeSize(cartridgeSize)
     , m_currentRomBank(1)
 {
-    std::memcpy(m_memory, m_cartridge, std::min(0x7FFF, static_cast<int>(m_cartridgeSize)));
+    std::memcpy(m_memory, m_cartridge, std::min(0x3FFF, static_cast<int>(m_cartridgeSize)));
 }
 
 Memory::~Memory()
@@ -123,55 +123,6 @@ void Memory::write(size_t address, uint8_t value)
             break;
         }
         }
-    }
-
-    // Writing to background tile map
-    if (address >= 0x9800 && address <= 0x9BFF)
-    {
-        uint8_t paletteColors = read(0xFF47);
-        uint16_t tileIndex = static_cast<uint16_t>(address) - 0x9800;
-        uint16_t beginTileData = 0x8000 + (16 * value);
-        uint16_t tileLocationInBackground = ((tileIndex / 32) * 256 * 8) + ((tileIndex % 32) * 8);
-        for (int i = 0; i < 16; i+=2)
-        {
-            uint8_t tileLSB = read(beginTileData + i);
-            uint8_t tileMSB = read(beginTileData + i + 1);
-            for (int j = 7; j >= 0; j--)
-            {
-                uint8_t paletteColorIdx = (((tileMSB & (1 << j)) >> j) << 1) | (((tileLSB & (1 << j)) >> j));
-                uint8_t color = (paletteColors >> (paletteColorIdx * 2)) & 0x3;
-                uint8_t tileOffset = ((i / 2) * 256) + abs(j - 7);
-                switch (color)
-                {
-                case 0:
-                {
-                    m_background[tileLocationInBackground + tileOffset] = 0.0f;
-                    break;
-                }
-                case 1:
-                {
-                    m_background[tileLocationInBackground + tileOffset] = 0.33f;
-                    break;
-                }
-                case 2:
-                {
-                    m_background[tileLocationInBackground + tileOffset] = 0.66f;
-                    break;
-                }
-                case 3:
-                {
-                    m_background[tileLocationInBackground + tileOffset] = 1.0f;
-                    break;
-                }
-                }
-            }
-        }
-    }
-
-    // Writing to window tile map
-    if (address >= 0x9C00 && address <= 0x9FFF)
-    {
-
     }
 
     // Writing to Echo RAM

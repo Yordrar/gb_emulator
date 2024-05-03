@@ -1,5 +1,7 @@
 #include "LCD.h"
 
+#include <format>
+
 #include "CPU.h"
 #include "Memory.h"
 
@@ -130,13 +132,9 @@ void LCD::update(double deltaTimeSeconds)
 	}
 }
 
+static const uint8_t colors[4] = {255, static_cast<uint8_t>(0.66f * 255), static_cast<uint8_t>(0.33f * 255), 0 };
 void LCD::writeScanlineToFrame()
 {
-	if ((m_memory->read(0xFF40) & 0b10000000) == 0)
-	{
-		return;
-	}
-
 	// Read LCD control register
 	uint8_t LCDC = m_memory->read(0xFF40);
 	uint8_t LCDDisplayEnable = (LCDC & 128) >> 7;		// (0=Off, 1=On)
@@ -148,22 +146,60 @@ void LCD::writeScanlineToFrame()
 	uint8_t SpriteDisplayEnable = (LCDC & 2) >> 1;		// (0=Off, 1=On)
 	uint8_t BGDisplay = (LCDC & 1);						// (0=Off, 1=On)
 
+	if (LCDDisplayEnable == 0)
+	{
+		return;
+	}
+
+	uint8_t WX = m_memory->read(0xFF4B) - 7;
+	uint8_t WY = m_memory->read(0xFF4A);
 	uint8_t SCX = m_memory->read(0xFF43);
 	uint8_t SCY = m_memory->read(0xFF42);
 	uint8_t paletteColors = m_memory->read(0xFF47);
+	uint16_t beginBGTileMap = BGTileMapDisplaySelect ? 0x9C00 : 0x9800;
+	uint16_t beginWindowTileMap = WindowTileMapSelect ? 0x9C00 : 0x9800;
+	uint16_t beginBGWindowTileData = BGWindowTileDataSelect ? 0x8000 : 0x8800;
 
 	int bgmX = SCX;
 	int bgmY = (SCY + m_currentLine) % 256;
-	for (uint32_t i = 0; i < 144; i++)
+	int tileMapX = bgmX / 8;
+	int tileMapY = bgmY / 8;
+	int tileMapOffset = (tileMapY * 32) + tileMapX;
+	int tileOffsetX = 7 - (bgmX % 8);
+	int tileOffsetY = bgmY % 8;
+	for (uint32_t j = 0; j < 160; j++)
 	{
-		for (uint32_t j = 0; j < 160; j++)
+		tileMapX = ((bgmX + j) / 8) % 32;
+		tileOffsetX = 7 - ((bgmX + j) % 8);
+		tileMapOffset = (tileMapY * 32) + tileMapX;
+
+		uint16_t beginTileMap = 0;
+		if (WindowDisplayEnable && j >= WX && m_currentLine >= WY)
 		{
-			//uint8_t color = bgm[(i * 160 + j)]*255;
-			uint8_t color = m_memory->read(0x9800 + (i * 160 + j));
-			m_frameTextureData[(i * 160 + j) * 4] = color;
-			m_frameTextureData[(i * 160 + j) * 4 + 1] = color;
-			m_frameTextureData[(i * 160 + j) * 4 + 2] = color;
-			m_frameTextureData[(j * 160 + j) * 4 + 3] = 0;
+			beginTileMap = beginWindowTileMap;
 		}
+		else
+		{
+			beginTileMap = beginBGTileMap;
+		}
+
+		uint8_t tileIdx = 0;
+		if (!BGWindowTileDataSelect)
+		{
+			uint8_t signedTileIdx = m_memory->read(beginTileMap + tileMapOffset);
+			tileIdx = (signedTileIdx - 0x80);
+		}
+		else
+		{
+			tileIdx = m_memory->read(beginTileMap + tileMapOffset);
+		}
+		uint8_t tileLSB = m_memory->read(beginBGWindowTileData + (tileIdx << 4) + (tileOffsetY << 1));
+		uint8_t tileMSB = m_memory->read(beginBGWindowTileData + (tileIdx << 4) + (tileOffsetY << 1) + 1);
+		uint8_t paletteIdx = (((tileMSB & (1 << tileOffsetX)) >> tileOffsetX) << 1) | (((tileLSB & (1 << tileOffsetX)) >> tileOffsetX));
+		uint8_t color = (paletteColors >> (paletteIdx * 2)) & 3;
+		m_frameTextureData[(m_currentLine * 160 + j) * 4] = colors[color];
+		m_frameTextureData[(m_currentLine * 160 + j) * 4 + 1] = colors[color];
+		m_frameTextureData[(m_currentLine * 160 + j) * 4 + 2] = colors[color];
+		m_frameTextureData[(m_currentLine * 160 + j) * 4 + 3] = 1;
 	}
 }

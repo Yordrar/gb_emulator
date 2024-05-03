@@ -10,6 +10,7 @@ class CPU;
 class Timer;
 class LCD;
 class Memory;
+class Joypad;
 
 class Emulator
 {
@@ -40,4 +41,5 @@ private:
     std::unique_ptr<CPU> m_cpu;
     std::unique_ptr<Timer> m_timer;
     std::unique_ptr<LCD> m_lcd;
+    std::unique_ptr<Joypad> m_joypad;
 };

@@ -24,7 +24,7 @@ void Timer::update(double deltaTimeSeconds)
     }
 
     // DIV
-    if (m_memory->read(0xFF04) != static_cast<uint8_t>(m_dividerRegister) % 256)
+    if (m_memory->read(0xFF04) != static_cast<uint64_t>(m_dividerRegister) % 256)
     {
         m_dividerRegister = 0;
         m_memory->write(0xFF04, 0);
@@ -32,7 +32,7 @@ void Timer::update(double deltaTimeSeconds)
     else
     {
         m_dividerRegister += 16384 * deltaTimeSeconds;
-        m_memory->write(0xFF04, static_cast<uint8_t>(m_dividerRegister) % 256);
+        m_memory->write(0xFF04, static_cast<uint64_t>(m_dividerRegister) % 256);
     }
 
     // TIMA

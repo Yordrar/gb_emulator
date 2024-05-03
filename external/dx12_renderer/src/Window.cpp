@@ -132,6 +132,21 @@ void Window::onMouseWheel(WindowMessageCallback const& msgCallback)
     m_msgToCallbackMap[WM_MOUSEWHEEL] = msgCallback;
 }
 
+void Window::onKeyboardButtonDown(WindowMessageCallback const& msgCallback)
+{
+    m_msgToCallbackMap[WM_KEYDOWN] = msgCallback;
+}
+
+void Window::onKeyboardButtonUp(WindowMessageCallback const& msgCallback)
+{
+    m_msgToCallbackMap[WM_KEYUP] = msgCallback;
+}
+
+void Window::onKeyboardCharacter(WindowMessageCallback const& msgCallback)
+{
+    m_msgToCallbackMap[WM_CHAR] = msgCallback;
+}
+
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT Window::windowCallback(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -166,6 +181,9 @@ LRESULT Window::windowCallback(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
     case WM_LBUTTONUP:
     case WM_MOUSEMOVE:
     case WM_MOUSEWHEEL:
+    case WM_KEYUP:
+    case WM_KEYDOWN:
+    case WM_CHAR:
         if (m_msgToCallbackMap.find(message) != m_msgToCallbackMap.end())
         {
             m_msgToCallbackMap[message](wParam, lParam);

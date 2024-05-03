@@ -52,18 +52,6 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 
     Renderer* renderer = window.getRenderer();
 
-    /*uint8_t* test = (uint8_t*)frameTextureData;
-    for (uint32_t i = 0; i < 144; i++)
-    {
-        for (uint32_t j = 0; j < 160; j++)
-        {
-            test[(i * 160 + j) * 4] = j;
-            test[(i * 160 + j) * 4 + 1] = i;
-            test[(i * 160 + j) * 4 + 2] = 0;
-            test[(i * 160 + j) * 4 + 3] = 0;
-        }
-    }*/
-
     D3D12_SUBRESOURCE_DATA frameTextureSubresData =
     {
         .pData = frameTextureData,
@@ -134,7 +122,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     }
     else
     {
-        emulator.openCartridgeFile("pokemon_red.gb");
+        emulator.openCartridgeFile("bgbtest.gb");
     }
 
     // TODO implement UI for loading ROMs

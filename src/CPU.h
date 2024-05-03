@@ -29,7 +29,9 @@ private:
     void jumpToInterruptIfAnyPending();
 
     uint8_t getCarryFlagsFor8BitAddition(uint8_t op1, uint8_t op2);
+    uint8_t getCarryFlagsFor8BitIncrement(uint8_t reg);
     uint8_t getCarryFlagsFor8BitSubtraction(uint8_t op1, uint8_t op2);
+    uint8_t getCarryFlagsFor8BitDecrement(uint8_t reg);
     uint8_t getCarryFlagsFor16BitAddition(uint16_t op1, uint16_t op2);
     uint8_t getCarryFlagsFor16BitSubtraction(uint16_t op1, uint16_t op2);
 
