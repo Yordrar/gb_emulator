@@ -27,6 +27,18 @@ Emulator::~Emulator()
 
 void Emulator::openCartridgeFile(char const* cartridgeFilename)
 {
+    std::string filepath(cartridgeFilename);
+    if (filepath.starts_with('\"'))
+    {
+        filepath = filepath.substr(1);
+    }
+    if (filepath.ends_with('\"'))
+    {
+        filepath = filepath.substr(0, filepath.size()-1);
+    }
+
+    cartridgeFilename = filepath.data();
+
     m_cartridgeSize = std::filesystem::file_size(cartridgeFilename);
     m_cartridge = std::make_unique<uint8_t[]>(m_cartridgeSize);
 
@@ -48,6 +60,8 @@ void Emulator::openCartridgeFile(char const* cartridgeFilename)
 
 void Emulator::emulate()
 {
+    if (!m_cartridge) return;
+
     end = std::chrono::high_resolution_clock::now();
 
     auto elapsedNanoSeconds = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
@@ -62,5 +76,7 @@ void Emulator::emulate()
 
 void Emulator::processInput(WPARAM wParam, LPARAM lParam)
 {
+    if (!m_cartridge) return;
+
     m_joypad->processInput(wParam, lParam);
 }

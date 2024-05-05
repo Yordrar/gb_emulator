@@ -20,7 +20,7 @@ public:
         JoyPad,
     };
 
-    static const uint64_t FrequencyHz = 4 * 1024 * 1024;
+    static const uint64_t FrequencyHz = 6 * 1024 * 1024;
 
     void update(double deltaTimeSeconds);
     void requestInterrupt(Interrupt interrupt);
@@ -92,6 +92,8 @@ private:
     } m_registers;
 
     bool m_interruptMasterEnableFlag;
+    bool m_isHalted;
+    bool m_hadPendingInterruptsWhenHalted;
 
     Memory* m_memory;
 

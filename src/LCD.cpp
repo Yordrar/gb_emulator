@@ -27,10 +27,10 @@ void LCD::update(double deltaTimeSeconds)
 	}
 
 	uint8_t LCDStatusRegister = m_memory->read(0xFF41);
-	uint8_t LYCLYInterruptEnable = (LCDStatusRegister & 0b01000000) >> 6;
-	uint8_t OAMInterruptEnable = (LCDStatusRegister & 0b00100000) >> 5;
-	uint8_t VBlankInterruptEnable = (LCDStatusRegister & 0b00010000) >> 4;
-	uint8_t HBlankInterruptEnable = (LCDStatusRegister & 0b00001000) >> 3;
+	uint8_t LYCLYInterruptEnable = 1;//(LCDStatusRegister & 0b01000000) >> 6;
+	uint8_t OAMInterruptEnable = 1;//(LCDStatusRegister & 0b00100000) >> 5;
+	uint8_t VBlankInterruptEnable = 1;//(LCDStatusRegister & 0b00010000) >> 4;
+	uint8_t HBlankInterruptEnable = 1;//(LCDStatusRegister & 0b00001000) >> 3;
 
 	double clockTicksToIncrement = CPU::FrequencyHz * deltaTimeSeconds;
 	m_timerCounter += clockTicksToIncrement;

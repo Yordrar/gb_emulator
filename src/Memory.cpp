@@ -79,7 +79,7 @@ void Memory::write(size_t address, uint8_t value)
 
     if (address >= 0x2000 && address <= 0x3FFF)
     {
-        uint8_t selectedRomBank = (value & 0x7F);
+        uint8_t selectedRomBank = (value & 0xFF);
         if (selectedRomBank == 0)
         {
             selectedRomBank++;
@@ -132,14 +132,6 @@ void Memory::write(size_t address, uint8_t value)
     if (address >= 0xE000 && address <= 0xFDFF)
     {
         address -= 0x2000;
-    }
-
-    //Joypad
-    if (address == 0xFF00)
-    {
-        uint8_t JOYP = read(0xFF00);
-        uint8_t newJOYP = (JOYP & 0b11001111) | value;
-        value = newJOYP;
     }
 
     // OAM DMA transfer

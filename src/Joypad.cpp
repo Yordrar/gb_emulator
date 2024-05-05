@@ -7,7 +7,7 @@
 
 Joypad::Joypad(Memory* memory)
     : m_memory(memory)
-    , m_upPressed(0)
+    , m_upPressed(1)
     , m_downPressed(1)
     , m_leftPressed(1)
     , m_rightPressed(1)

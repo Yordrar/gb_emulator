@@ -58,7 +58,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
         .RowPitch = 160 * 4,
         .SlicePitch = 0,
     };
-    ResourceHandle frameTexture = ResourceManager::it().createResource(L"frameTexture", CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 160, 140, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE), frameTextureSubresData);
+    ResourceHandle frameTexture = ResourceManager::it().createResource(L"frameTexture", CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 160, 144, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE), frameTextureSubresData);
     ResourceHandle mainDepthStencilTarget = ResourceManager::it().createResource(L"mainDepthStencilTarget", CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, renderer->getClientWidth(), renderer->getClientHeight(), 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL | D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE));
     
     RenderPass mainPass(L"Main Pass", L"main", Descriptor(), mainDepthStencilTarget.getDefaultDepthStencilView(D3D12_DSV_FLAG_READ_ONLY_DEPTH));
@@ -122,7 +122,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     }
     else
     {
-        emulator.openCartridgeFile("bgbtest.gb");
+        return 0;
     }
 
     // TODO implement UI for loading ROMs
