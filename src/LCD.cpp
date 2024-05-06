@@ -275,7 +275,7 @@ void LCD::writeScanlineToFrame()
 						uint8_t spriteMSB = m_memory->read(beginSpriteTileData + (spriteTile << 4) + (spriteOffsetY << 1) + 1);
 						uint8_t paletteIdx = (((spriteMSB & (1 << spriteOffsetX)) >> spriteOffsetX) << 1) | (((spriteLSB & (1 << spriteOffsetX)) >> spriteOffsetX));
 						uint8_t paletteColor = (paletteColors >> (paletteIdx * 2)) & 3;
-						if (paletteColor != 0)
+						if (paletteIdx != 0)
 						{
 							if (!OBJtoBGPriority
 								||
