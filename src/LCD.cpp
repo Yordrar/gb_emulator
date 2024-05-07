@@ -27,10 +27,10 @@ void LCD::update(double deltaTimeSeconds)
 	}
 
 	uint8_t LCDStatusRegister = m_memory->read(0xFF41);
-	uint8_t LYCLYInterruptEnable = 1;//(LCDStatusRegister & 0b01000000) >> 6;
-	uint8_t OAMInterruptEnable = 1;//(LCDStatusRegister & 0b00100000) >> 5;
-	uint8_t VBlankInterruptEnable = 1;//(LCDStatusRegister & 0b00010000) >> 4;
-	uint8_t HBlankInterruptEnable = 1;//(LCDStatusRegister & 0b00001000) >> 3;
+	uint8_t LYCLYInterruptEnable = (LCDStatusRegister & 0b01000000) >> 6;
+	uint8_t OAMInterruptEnable = (LCDStatusRegister & 0b00100000) >> 5;
+	uint8_t VBlankInterruptEnable = (LCDStatusRegister & 0b00010000) >> 4;
+	uint8_t HBlankInterruptEnable = (LCDStatusRegister & 0b00001000) >> 3;
 
 	double clockTicksToIncrement = CPU::FrequencyHz * deltaTimeSeconds;
 	m_timerCounter += clockTicksToIncrement;
@@ -179,18 +179,22 @@ void LCD::writeScanlineToFrame()
 		int tileOffsetY = bgmY % 8;
 		for (uint32_t j = 0; j < 160; j++)
 		{
-			tileMapX = ((bgmX + j) / 8) % 32;
-			tileOffsetX = 7 - ((bgmX + j) % 8);
-			tileMapOffset = (tileMapY * 32) + tileMapX;
-
 			uint16_t beginTileMap = 0;
 			if (WindowDisplayEnable && j >= WX && m_currentLine >= WY)
 			{
 				beginTileMap = beginWindowTileMap;
+				tileMapX = ((j - WX) / 8) % 32;
+				tileMapY = (m_currentLine - WY) / 8;
+				tileOffsetX = 7 - ((j - WX) % 8);
+				tileOffsetY = (m_currentLine - WY) % 8;
+				tileMapOffset = (tileMapY * 32) + tileMapX;
 			}
 			else
 			{
 				beginTileMap = beginBGTileMap;
+				tileMapX = ((bgmX + j) / 8) % 32;
+				tileOffsetX = 7 - ((bgmX + j) % 8);
+				tileMapOffset = (tileMapY * 32) + tileMapX;
 			}
 
 			uint8_t tileIdx = 0;

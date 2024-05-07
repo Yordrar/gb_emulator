@@ -6,12 +6,10 @@
 #include <cassert>
 #include <cstring>
 #include <cmath>
-#include <fstream>
 
 #include "Memory.h"
 #include "Joypad.h"
 
-static std::fstream logFile;
 CPU::CPU(Memory* memory, Joypad* joypad)
     : m_memory(memory)
     , m_joypad(joypad)
@@ -59,8 +57,6 @@ CPU::CPU(Memory* memory, Joypad* joypad)
     memory->write(0xFF4A, 0x00); // WY
     memory->write(0xFF4B, 0x00); // WX
     memory->write(0xFFFF, 0x00); // IE
-
-    logFile.open("log.txt", std::fstream::out | std::fstream::trunc);
 }
 
 CPU::~CPU()
@@ -90,23 +86,6 @@ void CPU::requestInterrupt(Interrupt interrupt)
 
 uint64_t CPU::executeInstruction()
 {
-    /*logFile << std::format("A:{:0>2X} F:{:0>2X} B:{:0>2X} C:{:0>2X} D:{:0>2X} E:{:0>2X} H:{:0>2X} L:{:0>2X} SP:{:0>4X} PC:{:0>4X} PCMEM:{:0>2X},{:0>2X},{:0>2X},{:0>2X}\n",
-        m_registers.A,
-        m_registers.F,
-        m_registers.B,
-        m_registers.C,
-        m_registers.D,
-        m_registers.E,
-        m_registers.H,
-        m_registers.L,
-        m_registers.SP,
-        m_registers.PC,
-        m_memory->read(m_registers.PC),
-        m_memory->read(m_registers.PC+1),
-        m_memory->read(m_registers.PC+2),
-        m_memory->read(m_registers.PC+3)
-        ).c_str();*/
-
     jumpToInterruptIfAnyPending();
 
     uint8_t opcode = 0x00;
@@ -133,11 +112,6 @@ uint64_t CPU::executeInstruction()
     else
     {
         opcode = m_memory->read(m_registers.PC++);
-    }
-
-    if (m_registers.PC == 0xDEF9 && opcode == 0x39 && m_registers.SP == 0x7FFF && m_registers.HL == 0x0001)
-    {
-        //DebugBreak();
     }
 
     uint16_t address = 0;
@@ -727,8 +701,8 @@ uint64_t CPU::executeInstruction()
         break;
     case 0x3F:
         n = m_registers.F & 0b00010000;
-        n = ~n;
-        m_registers.F &= 0b10011111;
+        n = (~n) & 0b00010000;
+        m_registers.F &= 0b10001111;
         m_registers.F |= n;
         return 4;
         break;
@@ -1152,44 +1126,44 @@ uint64_t CPU::executeInstruction()
         return 20;
         break;
     case 0xF5:
-        m_memory->write(--m_registers.SP, m_registers.F);
         m_memory->write(--m_registers.SP, m_registers.A);
+        m_memory->write(--m_registers.SP, m_registers.F);
         return 16;
         break;
     case 0xC5:
-        m_memory->write(--m_registers.SP, m_registers.C);
         m_memory->write(--m_registers.SP, m_registers.B);
+        m_memory->write(--m_registers.SP, m_registers.C);
         return 16;
         break;
     case 0xD5:
-        m_memory->write(--m_registers.SP, m_registers.E);
         m_memory->write(--m_registers.SP, m_registers.D);
+        m_memory->write(--m_registers.SP, m_registers.E);
         return 16;
         break;
     case 0xE5:
-        m_memory->write(--m_registers.SP, m_registers.L);
         m_memory->write(--m_registers.SP, m_registers.H);
+        m_memory->write(--m_registers.SP, m_registers.L);
         return 16;
         break;
     case 0xF1:
-        m_registers.A = m_memory->read(m_registers.SP++);
         m_registers.F = m_memory->read(m_registers.SP++);
+        m_registers.A = m_memory->read(m_registers.SP++);
         m_registers.F &= 0xF0;
         return 12;
         break;
     case 0xC1:
-        m_registers.B = m_memory->read(m_registers.SP++);
         m_registers.C = m_memory->read(m_registers.SP++);
+        m_registers.B = m_memory->read(m_registers.SP++);
         return 12;
         break;
     case 0xD1:
-        m_registers.D = m_memory->read(m_registers.SP++);
         m_registers.E = m_memory->read(m_registers.SP++);
+        m_registers.D = m_memory->read(m_registers.SP++);
         return 12;
         break;
     case 0xE1:
-        m_registers.H = m_memory->read(m_registers.SP++);
         m_registers.L = m_memory->read(m_registers.SP++);
+        m_registers.H = m_memory->read(m_registers.SP++);
         return 12;
         break;
 
@@ -1243,58 +1217,148 @@ uint64_t CPU::executeInstruction()
         break;
     case 0x8F:
         carry = (m_registers.F & 0b00010000) >> 4;
-        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_registers.A + carry);
-        m_registers.A += m_registers.A + carry;
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_registers.A);
+        m_registers.A += m_registers.A;
+        m_registers.F |= getCarryFlagsFor8BitAddition(m_registers.A, carry);
+        m_registers.A += carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 4;
         break;
     case 0x88:
         carry = (m_registers.F & 0b00010000) >> 4;
-        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_registers.B + carry);
-        m_registers.A += m_registers.B + carry;
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_registers.B);
+        m_registers.A += m_registers.B;
+        m_registers.F |= getCarryFlagsFor8BitAddition(m_registers.A, carry);
+        m_registers.A += carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 4;
         break;
     case 0x89:
         carry = (m_registers.F & 0b00010000) >> 4;
-        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_registers.C + carry);
-        m_registers.A += m_registers.C + carry;
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_registers.C);
+        m_registers.A += m_registers.C;
+        m_registers.F |= getCarryFlagsFor8BitAddition(m_registers.A, carry);
+        m_registers.A += carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 4;
         break;
     case 0x8A:
         carry = (m_registers.F & 0b00010000) >> 4;
-        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_registers.D + carry);
-        m_registers.A += m_registers.D + carry;
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_registers.D);
+        m_registers.A += m_registers.D;
+        m_registers.F |= getCarryFlagsFor8BitAddition(m_registers.A, carry);
+        m_registers.A += carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 4;
         break;
     case 0x8B:
         carry = (m_registers.F & 0b00010000) >> 4;
-        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_registers.E + carry);
-        m_registers.A += m_registers.E + carry;
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_registers.E);
+        m_registers.A += m_registers.E;
+        m_registers.F |= getCarryFlagsFor8BitAddition(m_registers.A, carry);
+        m_registers.A += carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 4;
         break;
     case 0x8C:
         carry = (m_registers.F & 0b00010000) >> 4;
-        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_registers.H + carry);
-        m_registers.A += m_registers.H + carry;
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_registers.H);
+        m_registers.A += m_registers.H;
+        m_registers.F |= getCarryFlagsFor8BitAddition(m_registers.A, carry);
+        m_registers.A += carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 4;
         break;
     case 0x8D:
         carry = (m_registers.F & 0b00010000) >> 4;
-        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_registers.L + carry);
-        m_registers.A += m_registers.L + carry;
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_registers.L);
+        m_registers.A += m_registers.L;
+        m_registers.F |= getCarryFlagsFor8BitAddition(m_registers.A, carry);
+        m_registers.A += carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 4;
         break;
     case 0x8E:
         carry = (m_registers.F & 0b00010000) >> 4;
         n = m_memory->read(m_registers.HL);
-        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, n + carry);
-        m_registers.A += n + carry;
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, n);
+        m_registers.A += n;
+        m_registers.F |= getCarryFlagsFor8BitAddition(m_registers.A, carry);
+        m_registers.A += carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 8;
         break;
     case 0xCE:
         carry = (m_registers.F & 0b00010000) >> 4;
         n = m_memory->read(m_registers.PC++);
-        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, n + carry);
-        m_registers.A += n + carry;
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, n);
+        m_registers.A += n;
+        m_registers.F |= getCarryFlagsFor8BitAddition(m_registers.A, carry);
+        m_registers.A += carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 8;
         break;
     case 0x97:
@@ -1346,58 +1410,139 @@ uint64_t CPU::executeInstruction()
         break;
     case 0x9F:
         carry = (m_registers.F & 0b00010000) >> 4;
-        m_registers.F = getCarryFlagsFor8BitSubtraction(m_registers.A, m_registers.A + carry);
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, carry);
+        m_registers.F |= getCarryFlagsFor8BitSubtraction(m_registers.A, m_registers.A + carry);
         m_registers.A -= m_registers.A + carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 4;
         break;
     case 0x98:
         carry = (m_registers.F & 0b00010000) >> 4;
-        m_registers.F = getCarryFlagsFor8BitSubtraction(m_registers.A, m_registers.B + carry);
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.B, carry);
+        m_registers.F |= getCarryFlagsFor8BitSubtraction(m_registers.A, m_registers.B + carry);
         m_registers.A -= m_registers.B + carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 4;
         break;
     case 0x99:
         carry = (m_registers.F & 0b00010000) >> 4;
-        m_registers.F = getCarryFlagsFor8BitSubtraction(m_registers.A, m_registers.C + carry);
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.C, carry);
+        m_registers.F |= getCarryFlagsFor8BitSubtraction(m_registers.A, m_registers.C + carry);
         m_registers.A -= m_registers.C + carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 4;
         break;
     case 0x9A:
         carry = (m_registers.F & 0b00010000) >> 4;
-        m_registers.F = getCarryFlagsFor8BitSubtraction(m_registers.A, m_registers.D + carry);
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.D, carry);
+        m_registers.F |= getCarryFlagsFor8BitSubtraction(m_registers.A, m_registers.D + carry);
         m_registers.A -= m_registers.D + carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 4;
         break;
     case 0x9B:
         carry = (m_registers.F & 0b00010000) >> 4;
-        m_registers.F = getCarryFlagsFor8BitSubtraction(m_registers.A, m_registers.E + carry);
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.E, carry);
+        m_registers.F |= getCarryFlagsFor8BitSubtraction(m_registers.A, m_registers.E + carry);
         m_registers.A -= m_registers.E + carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 4;
         break;
     case 0x9C:
         carry = (m_registers.F & 0b00010000) >> 4;
-        m_registers.F = getCarryFlagsFor8BitSubtraction(m_registers.A, m_registers.H + carry);
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.H, carry);
+        m_registers.F |= getCarryFlagsFor8BitSubtraction(m_registers.A, m_registers.H + carry);
         m_registers.A -= m_registers.H + carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 4;
         break;
     case 0x9D:
         carry = (m_registers.F & 0b00010000) >> 4;
-        m_registers.F = getCarryFlagsFor8BitSubtraction(m_registers.A, m_registers.L + carry);
+        m_registers.F = getCarryFlagsFor8BitAddition(m_registers.L, carry);
+        m_registers.F |= getCarryFlagsFor8BitSubtraction(m_registers.A, m_registers.L + carry);
         m_registers.A -= m_registers.L + carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 4;
         break;
     case 0x9E:
         carry = (m_registers.F & 0b00010000) >> 4;
         n = m_memory->read(m_registers.HL);
-        m_registers.F = getCarryFlagsFor8BitSubtraction(m_registers.A, n + carry);
+        m_registers.F = getCarryFlagsFor8BitAddition(n, carry);
+        m_registers.F |= getCarryFlagsFor8BitSubtraction(m_registers.A, n + carry);
         m_registers.A -= n + carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 8;
         break;
     case 0xDE:
         carry = (m_registers.F & 0b00010000) >> 4;
         n = m_memory->read(m_registers.PC++);
-        m_registers.F = getCarryFlagsFor8BitSubtraction(m_registers.A, n + carry);
+        m_registers.F = getCarryFlagsFor8BitAddition(n, carry);
+        m_registers.F |= getCarryFlagsFor8BitSubtraction(m_registers.A, n + carry);
         m_registers.A -= n + carry;
+        if (m_registers.A == 0)
+        {
+            m_registers.F |= 0b10000000;
+        }
+        else
+        {
+            m_registers.F &= 0b01111111;
+        }
         return 8;
         break;
     case 0xA7:
@@ -1979,8 +2124,8 @@ uint64_t CPU::executeInstruction()
         // Call operations
     case 0xCD:
         address = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | uint16_t(m_memory->read(m_registers.PC++) << 8);
-        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_registers.PC = address;
         return 24;
         break;
@@ -1989,8 +2134,8 @@ uint64_t CPU::executeInstruction()
         if (n == 0)
         {
             address = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | uint16_t(m_memory->read(m_registers.PC++) << 8);
-            m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
             m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+            m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
             m_registers.PC = address;
             return 24;
         }
@@ -2002,8 +2147,8 @@ uint64_t CPU::executeInstruction()
         if (n == 1)
         {
             address = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | uint16_t(m_memory->read(m_registers.PC++) << 8);
-            m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
             m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+            m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
             m_registers.PC = address;
             return 24;
         }
@@ -2015,8 +2160,8 @@ uint64_t CPU::executeInstruction()
         if (n == 0)
         {
             address = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | uint16_t(m_memory->read(m_registers.PC++) << 8);
-            m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
             m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+            m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
             m_registers.PC = address;
             return 24;
         }
@@ -2028,8 +2173,8 @@ uint64_t CPU::executeInstruction()
         if (n == 1)
         {
             address = (uint16_t(m_memory->read(m_registers.PC++)) >> 0) | uint16_t(m_memory->read(m_registers.PC++) << 8);
-            m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
             m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+            m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
             m_registers.PC = address;
             return 24;
         }
@@ -2039,16 +2184,16 @@ uint64_t CPU::executeInstruction()
 
         // Return operations
     case 0xC9:
-        m_registers.PC = (uint16_t(m_memory->read(m_registers.SP++)) << 8) & 0xFF00;
-        m_registers.PC |= uint16_t(m_memory->read(m_registers.SP++));
+        m_registers.PC = uint16_t(m_memory->read(m_registers.SP++));
+        m_registers.PC |= (uint16_t(m_memory->read(m_registers.SP++)) << 8) & 0xFF00;
         return 16;
         break;
     case 0xC0:
         n = (m_registers.F & 0b10000000) >> 7;
         if (n == 0)
         {
-            m_registers.PC = (uint16_t(m_memory->read(m_registers.SP++)) << 8) & 0xFF00;
-            m_registers.PC |= uint16_t(m_memory->read(m_registers.SP++));
+            m_registers.PC = uint16_t(m_memory->read(m_registers.SP++));
+            m_registers.PC |= (uint16_t(m_memory->read(m_registers.SP++)) << 8) & 0xFF00;
             return 20;
         }
         return 8;
@@ -2057,8 +2202,8 @@ uint64_t CPU::executeInstruction()
         n = (m_registers.F & 0b10000000) >> 7;
         if (n == 1)
         {
-            m_registers.PC = (uint16_t(m_memory->read(m_registers.SP++)) << 8) & 0xFF00;
-            m_registers.PC |= uint16_t(m_memory->read(m_registers.SP++));
+            m_registers.PC = uint16_t(m_memory->read(m_registers.SP++));
+            m_registers.PC |= (uint16_t(m_memory->read(m_registers.SP++)) << 8) & 0xFF00;
             return 20;
         }
         return 8;
@@ -2067,8 +2212,8 @@ uint64_t CPU::executeInstruction()
         n = (m_registers.F & 0b00010000) >> 4;
         if (n == 0)
         {
-            m_registers.PC = (uint16_t(m_memory->read(m_registers.SP++)) << 8) & 0xFF00;
-            m_registers.PC |= uint16_t(m_memory->read(m_registers.SP++));
+            m_registers.PC = uint16_t(m_memory->read(m_registers.SP++));
+            m_registers.PC |= (uint16_t(m_memory->read(m_registers.SP++)) << 8) & 0xFF00;
             return 20;
         }
         return 8;
@@ -2077,65 +2222,65 @@ uint64_t CPU::executeInstruction()
         n = (m_registers.F & 0b00010000) >> 4;
         if (n == 1)
         {
-            m_registers.PC = (uint16_t(m_memory->read(m_registers.SP++)) << 8) & 0xFF00;
-            m_registers.PC |= uint16_t(m_memory->read(m_registers.SP++));
+            m_registers.PC = uint16_t(m_memory->read(m_registers.SP++));
+            m_registers.PC |= (uint16_t(m_memory->read(m_registers.SP++)) << 8) & 0xFF00;
             return 20;
         }
         return 8;
         break;
     case 0xD9:
-        m_registers.PC = (uint16_t(m_memory->read(m_registers.SP++)) << 8) & 0xFF00;
-        m_registers.PC |= uint16_t(m_memory->read(m_registers.SP++));
+        m_registers.PC = uint16_t(m_memory->read(m_registers.SP++));
+        m_registers.PC |= (uint16_t(m_memory->read(m_registers.SP++)) << 8) & 0xFF00;
         m_interruptMasterEnableFlag = true;
         return 16;
         break;
 
         //Reset operations (RST)
     case 0xC7:
-        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_registers.PC = 0x0000;
         return 16;
         break;
     case 0xD7:
-        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_registers.PC = 0x0010;
         return 16;
         break;
     case 0xE7:
-        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_registers.PC = 0x0020;
         return 16;
         break;
     case 0xF7:
-        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_registers.PC = 0x0030;
         return 16;
         break;
     case 0xCF:
-        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_registers.PC = 0x0008;
         return 16;
         break;
     case 0xDF:
-        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_registers.PC = 0x0018;
         return 16;
         break;
     case 0xEF:
-        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_registers.PC = 0x0028;
         return 16;
         break;
     case 0xFF:
-        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_memory->write(--m_registers.SP, uint8_t((m_registers.PC & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(m_registers.PC & 0x00FF));
         m_registers.PC = 0x0038;
         return 16;
         break;
@@ -2175,8 +2320,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_memory->write(0xFF0F, interruptFlag & ~1);
         m_interruptMasterEnableFlag = false;
 
-        m_memory->write(--m_registers.SP, uint8_t(PCAfterInterrupt & 0x00FF));
         m_memory->write(--m_registers.SP, uint8_t((PCAfterInterrupt & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(PCAfterInterrupt & 0x00FF));
         m_registers.PC = 0x0040;
         m_isHalted = false;
     }
@@ -2187,8 +2332,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_memory->write(0xFF0F, interruptFlag & ~2);
         m_interruptMasterEnableFlag = false;
 
-        m_memory->write(--m_registers.SP, uint8_t(PCAfterInterrupt & 0x00FF));
         m_memory->write(--m_registers.SP, uint8_t((PCAfterInterrupt & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(PCAfterInterrupt & 0x00FF));
         m_registers.PC = 0x0048;
         m_isHalted = false;
     }
@@ -2199,8 +2344,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_memory->write(0xFF0F, interruptFlag & ~4);
         m_interruptMasterEnableFlag = false;
 
-        m_memory->write(--m_registers.SP, uint8_t(PCAfterInterrupt & 0x00FF));
         m_memory->write(--m_registers.SP, uint8_t((PCAfterInterrupt & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(PCAfterInterrupt & 0x00FF));
         m_registers.PC = 0x0050;
         m_isHalted = false;
     }
@@ -2211,8 +2356,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_memory->write(0xFF0F, interruptFlag & ~8);
         m_interruptMasterEnableFlag = false;
 
-        m_memory->write(--m_registers.SP, uint8_t(PCAfterInterrupt & 0x00FF));
         m_memory->write(--m_registers.SP, uint8_t((PCAfterInterrupt & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(PCAfterInterrupt & 0x00FF));
         m_registers.PC = 0x0058;
         m_isHalted = false;
     }
@@ -2223,8 +2368,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_memory->write(0xFF0F, interruptFlag & ~16);
         m_interruptMasterEnableFlag = false;
 
-        m_memory->write(--m_registers.SP, uint8_t(PCAfterInterrupt & 0x00FF));
         m_memory->write(--m_registers.SP, uint8_t((PCAfterInterrupt & 0xFF00) >> 8));
+        m_memory->write(--m_registers.SP, uint8_t(PCAfterInterrupt & 0x00FF));
         m_registers.PC = 0x0060;
         m_isHalted = false;
     }
@@ -2431,7 +2576,7 @@ void CPU::testBitInRegister(uint8_t bit, uint8_t& reg)
     {
         newFlag |= 0b10000000;
     }
-    m_registers.F = (m_registers.F & 0b0001000) | newFlag;
+    m_registers.F = (m_registers.F & 0b00010000) | newFlag;
 }
 
 void CPU::setBitInRegister(uint8_t bit, uint8_t& reg)

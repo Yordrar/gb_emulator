@@ -60,19 +60,11 @@ uint8_t& Memory::read(size_t address)
         address -= 0x2000;
     }
 
-    /*if (address == 0xFF44)
-    {
-        test = 0x90;
-        return test;
-    }*/
-
     return m_memory[address];
 }
 
 void Memory::write(size_t address, uint8_t value)
 {
-    //if (address == 0xDF7D && value == 0xFB) DebugBreak();
-
     if (address >= 0x0000 && address <= 0x1FFF)
     {
         if ((value & 0x0F) == 0x0A)
