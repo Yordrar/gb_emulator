@@ -97,6 +97,7 @@ void Emulator::emulate()
         totalExecutedCycles += executedCycles;
         m_timer->update(executedCycles);
         m_lcd->update(executedCycles);
+        m_sound->update(executedCycles);
     }
 
     start = std::chrono::high_resolution_clock::now();

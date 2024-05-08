@@ -22,53 +22,166 @@ Sound::Sound(Memory* memory)
         .cbSize = 0,
     };
 
-    m_audioEngine->CreateSourceVoice(&m_squareWave1, &m_waveFormat);
+    m_squareWave1Callback = new VoiceCallback(m_memory, &m_squareWave1, VoiceCallback::VoiceType::SquareWave1);
+    m_squareWave2Callback = new VoiceCallback(m_memory, &m_squareWave2, VoiceCallback::VoiceType::SquareWave2);
+    m_customWaveCallback = new VoiceCallback(m_memory, &m_customWave, VoiceCallback::VoiceType::CustomWave);
+    m_noiseWaveCallback = new VoiceCallback(m_memory, &m_noiseWave, VoiceCallback::VoiceType::NoiseWave);
 
-    m_squareWave1->Start();
-}
-
-Sound::~Sound()
-{
-    m_masteringVoice->DestroyVoice();
-    m_squareWave1->DestroyVoice();
-}
-
-static uint64_t totalSamplesGenerated = 0;
-bool high = false;
-void Sound::update(double deltaTimeSeconds)
-{
-    XAUDIO2_VOICE_STATE state;
-    m_squareWave1->GetState(&state);
-    if (state.BuffersQueued > 0) return;
-
-    uint32_t numSamplesToGenerate = static_cast<uint32_t>(44100 * deltaTimeSeconds);
-
-    uint8_t* buffer = nullptr;
-
-    for (uint32_t i = 0; i < numSamplesToGenerate; i++)
-    {
-        if (totalSamplesGenerated % 261 == 0) high = !high;
-        buffer[i] = high ? 10 : 0;
-        totalSamplesGenerated++;
-    }
+    m_audioEngine->CreateSourceVoice(&m_squareWave1, &m_waveFormat, 0, XAUDIO2_DEFAULT_FREQ_RATIO, m_squareWave1Callback);
+    m_audioEngine->CreateSourceVoice(&m_squareWave2, &m_waveFormat, 0, XAUDIO2_DEFAULT_FREQ_RATIO, m_squareWave2Callback);
+    m_audioEngine->CreateSourceVoice(&m_customWave, &m_waveFormat, 0, XAUDIO2_DEFAULT_FREQ_RATIO, m_customWaveCallback);
+    m_audioEngine->CreateSourceVoice(&m_noiseWave, &m_waveFormat, 0, XAUDIO2_DEFAULT_FREQ_RATIO, m_noiseWaveCallback);
 
     XAUDIO2_BUFFER xaudioBuffer =
     {
         .Flags = 0,
-        .AudioBytes = 44100,
-        .pAudioData = buffer,
+        .AudioBytes = 1600,
+        .pAudioData = m_initialAudioDataBuffer,
         .PlayBegin = 0,
-        .PlayLength = numSamplesToGenerate,
+        .PlayLength = 0,
         .LoopBegin = 0,
         .LoopLength = 0,
         .LoopCount = XAUDIO2_NO_LOOP_REGION,
         .pContext = 0,
     };
-
     m_squareWave1->SubmitSourceBuffer(&xaudioBuffer);
+    m_squareWave1->SetVolume(0.0f);
+    //m_squareWave1->Start();
+
+    m_squareWave2->SubmitSourceBuffer(&xaudioBuffer);
+    m_squareWave2->SetVolume(0.0f);
+    m_squareWave2->Start();
+}
+
+Sound::~Sound()
+{
+    m_squareWave1->Stop();
+    m_squareWave1->DestroyVoice();
+
+    m_squareWave2->Stop();
+    m_squareWave2->DestroyVoice();
+
+    m_customWave->Stop();
+    m_customWave->DestroyVoice();
+
+    m_noiseWave->Stop();
+    m_noiseWave->DestroyVoice();
+
+    m_masteringVoice->DestroyVoice();
+}
+
+void Sound::update(uint64_t cyclesToEmulate)
+{
+    m_squareWave2Callback->update(cyclesToEmulate);
+}
+
+VoiceCallback::VoiceCallback(Memory* memory, IXAudio2SourceVoice** sourceVoice, VoiceType voiceType)
+    : m_bufferEndEvent(CreateEvent(NULL, FALSE, FALSE, NULL))
+    , m_memory(memory)
+    , m_sourceVoice(sourceVoice)
+    , m_voiceType(voiceType)
+{
+}
+
+VoiceCallback::~VoiceCallback()
+{
+    CloseHandle(m_bufferEndEvent);
+}
+
+void VoiceCallback::update(uint64_t cyclesToEmulate)
+{
+    switch (m_voiceType)
+    {
+    case VoiceType::SquareWave1:
+    {
+        SquareWave1Func(cyclesToEmulate);
+    }
+    break;
+    case VoiceType::SquareWave2:
+    {
+        SquareWave2Func(cyclesToEmulate);
+    }
+    break;
+    case VoiceType::CustomWave:
+    {
+        CustomWaveFunc(cyclesToEmulate);
+    }
+    break;
+    case VoiceType::NoiseWave:
+    {
+        NoiseWaveFunc(cyclesToEmulate);
+    }
+    break;
+    default:
+        break;
+    }
+}
+
+void VoiceCallback::SquareWave1Func(uint64_t cyclesToEmulate)
+{
+    uint8_t* audioDataBuffer = m_currentBuffer ? m_audioDataBuffer2 : m_audioDataBuffer1;
+    uint64_t& audioDataBufferSampleCount = m_currentBuffer ? m_audioDataBuffer2SampleCount : m_audioDataBuffer1SampleCount;
+
+    if (audioDataBufferSampleCount >= sc_AudioDataBufferSize) return;
+
+
+
+    for (uint64_t i = audioDataBufferSampleCount; i < (audioDataBufferSampleCount + cyclesToEmulate) && i < sc_AudioDataBufferSize; i++)
+    {
+        if ((runnningSampleCount % 441) == 0) high = !high;
+        audioDataBuffer[i] = high ? 10 : 0;
+        runnningSampleCount++;
+    }
+
+    audioDataBufferSampleCount += cyclesToEmulate;
+}
+
+void VoiceCallback::SquareWave2Func(uint64_t cyclesToEmulate)
+{
+    uint8_t* audioDataBuffer = m_currentBuffer ? m_audioDataBuffer2 : m_audioDataBuffer1;
+    uint64_t& audioDataBufferSampleCount = m_currentBuffer ? m_audioDataBuffer2SampleCount : m_audioDataBuffer1SampleCount;
+
+    if (audioDataBufferSampleCount >= sc_AudioDataBufferSize) return;
+
+
+
+    for (uint64_t i = audioDataBufferSampleCount; i < (audioDataBufferSampleCount + cyclesToEmulate) && i < sc_AudioDataBufferSize; i++)
+    {
+        if ((runnningSampleCount % 441) == 0) high = !high;
+        audioDataBuffer[i] = high ? 10 : 0;
+        runnningSampleCount++;
+    }
+
+    audioDataBufferSampleCount += cyclesToEmulate;
+}
+
+void VoiceCallback::CustomWaveFunc(uint64_t cyclesToEmulate)
+{
+}
+
+void VoiceCallback::NoiseWaveFunc(uint64_t cyclesToEmulate)
+{
 }
 
 void VoiceCallback::OnBufferEnd(void*)
 {
-    SetEvent(m_bufferEndEvent);
+    uint8_t* audioDataBuffer = m_currentBuffer ? m_audioDataBuffer2 : m_audioDataBuffer1;
+    uint64_t audioDataBufferSampleCount = m_currentBuffer ? m_audioDataBuffer2SampleCount : m_audioDataBuffer1SampleCount;
+    XAUDIO2_BUFFER xaudioBuffer =
+    {
+        .Flags = 0,
+        .AudioBytes = sc_AudioDataBufferSize,
+        .pAudioData = audioDataBuffer,
+        .PlayBegin = 0,
+        .PlayLength = 0,
+        .LoopBegin = 0,
+        .LoopLength = 0,
+        .LoopCount = XAUDIO2_NO_LOOP_REGION,
+        .pContext = 0,
+    };
+    (*m_sourceVoice)->SetVolume(1.0f);
+    (*m_sourceVoice)->SubmitSourceBuffer(&xaudioBuffer);
+    m_currentBuffer = !m_currentBuffer;
+    m_audioDataBuffer1SampleCount = 0;
+    m_audioDataBuffer2SampleCount = 0;
 }
