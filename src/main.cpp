@@ -118,7 +118,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     Emulator emulator(frameTexture, frameTextureData);
     if (lstrcmpW(pCmdLine, L"") != 0)
     {
-        emulator.openCartridgeFile(WideStrToStr(pCmdLine).c_str());
+        emulator.openRomFile(WideStrToStr(pCmdLine).c_str());
     }
     else
     {
@@ -126,7 +126,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     }
 
     // TODO implement UI for loading ROMs
-    bool show_window = true;
+    bool show_window = false;
     renderer->registerImguiCallback([&show_window, &renderer, &mainPass, &emulator]()
         {
             if (show_window)
@@ -152,7 +152,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     {
         emulator.emulate();
 
-        if (ResourceManager::it().getResourceNeedsCopyToGPU(frameTexture))
+        //if (ResourceManager::it().getResourceNeedsCopyToGPU(frameTexture))
         {
             renderer->beginFrame();
             renderer->submitRenderPass(mainPass, *scene, { &scene->getCamera() });

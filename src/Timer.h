@@ -11,7 +11,7 @@ public:
     Timer(CPU* cpu, Memory* memory);
     ~Timer();
 
-    void update(double deltaTimeSeconds);
+    void update(uint64_t cyclesToEmulate);
 
 private:
     uint64_t clockFrequenciesHz[4] = { 4096, 262144, 65536, 16384 };

@@ -13,7 +13,7 @@ public:
     LCD(CPU* cpu, Memory* memory, ResourceHandle frameTexture, uint8_t* frameTextureData);
     ~LCD();
 
-    void update(double deltaTimeSeconds);
+    void update(uint64_t cyclesToEmulate);
 
 private:
     void writeScanlineToFrame();

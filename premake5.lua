@@ -1,5 +1,5 @@
 workspace "gb_emulator"
-	configurations { "Debug", "Release" }
+	configurations { "Debug", "Debugopt", "Release" }
 	system "Windows"
     architecture "x86_64"
 	language "C++"
@@ -8,7 +8,7 @@ workspace "gb_emulator"
 	startproject "gb_emulator"
 	staticruntime "on"
 	flags "MultiProcessorCompile"
-
+	
 filter "Debug"
 	runtime "Debug"
 	symbols "on"
@@ -16,6 +16,14 @@ filter "Debug"
 	targetdir "build/bin/debug"
 	debugdir "build/bin/debug"
 	defines {"RENDERER_DEBUG", "EMULATOR_DEBUG"}
+
+filter "Debugopt"
+	runtime "Debug"
+	symbols "on"
+	optimize "on"
+	targetdir "build/bin/debugopt"
+	debugdir "build/bin/debugopt"
+	defines {"RENDERER_DEBUG", "EMULATOR_DEBUGOPT"}
 
 filter "Release"
 	runtime "Release"
@@ -35,7 +43,7 @@ project "gb_emulator"
 		"src/**.cpp",
 	}
 	libdirs "external/"
-	links { "dx12_renderer" }
+	links { "dx12_renderer", "Xaudio2" }
 	defines { "NOMINMAX", "WIN32_LEAN_AND_MEAN" }
 	includedirs { 
 		"src",

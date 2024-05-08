@@ -15,7 +15,7 @@ Timer::~Timer()
 {
 }
 
-void Timer::update(double deltaTimeSeconds)
+void Timer::update(uint64_t cyclesToEmulate)
 {
     uint8_t timerStop = (m_memory->read(0xFF07) & 0x4) >> 2;
     if (timerStop == 0)
@@ -23,17 +23,17 @@ void Timer::update(double deltaTimeSeconds)
         return;
     }
 
+    double deltaTimeSeconds = static_cast<double>(cyclesToEmulate) / CPU::FrequencyHz;
+
     // DIV
-    if (m_memory->read(0xFF04) != static_cast<uint64_t>(m_dividerRegister) % 256)
+    if (m_memory->read(0xFF04) != static_cast<uint8_t>(m_dividerRegister))
     {
         m_dividerRegister = 0;
         m_memory->write(0xFF04, 0);
     }
-    else
-    {
-        m_dividerRegister += 16384 * deltaTimeSeconds;
-        m_memory->write(0xFF04, static_cast<uint64_t>(m_dividerRegister) % 256);
-    }
+    m_dividerRegister += 16384 * deltaTimeSeconds;
+    m_dividerRegister = static_cast<double>(static_cast<uint32_t>(m_dividerRegister) % 256);
+    m_memory->write(0xFF04, static_cast<uint8_t>(m_dividerRegister));
 
     // TIMA
     uint8_t inputClockSelect = (m_memory->read(0xFF07) & 0x3);

@@ -20,13 +20,12 @@ public:
         JoyPad,
     };
 
-    static const uint64_t FrequencyHz = 6 * 1024 * 1024;
+    static const uint64_t FrequencyHz = 4 * 1024 * 1024;
 
-    void update(double deltaTimeSeconds);
     void requestInterrupt(Interrupt interrupt);
+    uint64_t executeInstruction();
 
 private:
-    uint64_t executeInstruction();
     void jumpToInterruptIfAnyPending();
 
     uint8_t getCarryFlagsFor8BitAddition(uint8_t op1, uint8_t op2);

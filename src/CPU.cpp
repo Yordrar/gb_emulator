@@ -63,22 +63,6 @@ CPU::~CPU()
 {
 }
 
-static uint64_t executedCycles = 0;
-void CPU::update(double deltaTimeSeconds)
-{
-    uint64_t elapsedCPUCycles = static_cast<uint64_t>(CPU::FrequencyHz * deltaTimeSeconds);
-
-    while (executedCycles < elapsedCPUCycles)
-    {
-        executedCycles += executeInstruction();
-    }
-
-    // We could have executed more instructions than necessary
-    // In that case we need to remember how many cycles we went over
-    // so that next time we execute less instructions
-    executedCycles = executedCycles - elapsedCPUCycles;
-}
-
 void CPU::requestInterrupt(Interrupt interrupt)
 {
     m_memory->write(0xFF0F, m_memory->read(0xFF0F) | (1 << interrupt));

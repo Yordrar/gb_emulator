@@ -19,7 +19,7 @@ LCD::~LCD()
 {
 }
 
-void LCD::update(double deltaTimeSeconds)
+void LCD::update(uint64_t cyclesToEmulate)
 {
 	if (m_memory->read(0xFF44) != m_currentLine && m_currentLine != -1)
 	{
@@ -27,13 +27,12 @@ void LCD::update(double deltaTimeSeconds)
 	}
 
 	uint8_t LCDStatusRegister = m_memory->read(0xFF41);
-	uint8_t LYCLYInterruptEnable = (LCDStatusRegister & 0b01000000) >> 6;
-	uint8_t OAMInterruptEnable = (LCDStatusRegister & 0b00100000) >> 5;
-	uint8_t VBlankInterruptEnable = (LCDStatusRegister & 0b00010000) >> 4;
-	uint8_t HBlankInterruptEnable = (LCDStatusRegister & 0b00001000) >> 3;
+	uint8_t LYCLYInterruptEnable = 1;//(LCDStatusRegister & 0b01000000) >> 6;
+	uint8_t OAMInterruptEnable = 1;//(LCDStatusRegister & 0b00100000) >> 5;
+	uint8_t VBlankInterruptEnable = 1;//(LCDStatusRegister & 0b00010000) >> 4;
+	uint8_t HBlankInterruptEnable = 1;//(LCDStatusRegister & 0b00001000) >> 3;
 
-	double clockTicksToIncrement = CPU::FrequencyHz * deltaTimeSeconds;
-	m_timerCounter += clockTicksToIncrement;
+	m_timerCounter += cyclesToEmulate;
 
 	switch (LCDStatusRegister & 3)
 	{
@@ -75,9 +74,9 @@ void LCD::update(double deltaTimeSeconds)
 			{
 				// Enter vblank
 				m_memory->write(0xFF41, (m_memory->read(0xFF41) & 0b11111100) | 1);
-				if (1)
+				if (VBlankInterruptEnable)
 				{
-					m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
+					//m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
 					m_cpu->requestInterrupt(CPU::Interrupt::VBlank);
 				}
 				m_frameTexture.setNeedsCopyToGPU();
@@ -140,7 +139,7 @@ static const RGB greyscalePalette[4] = { {255, 255, 255}, {168, 168, 168}, {84, 
 static const RGB greenPalette[4] = { {0xE9, 0xE4, 0xE2}, {0x9F, 0x96, 0x60}, {0x37, 0x5A, 0x26}, {0x00, 0x2A, 0x3D} };
 static const RGB lospecPalette[4] = { {0xC7, 0xC6, 0xC6}, {0x7C, 0x6D, 0x80}, {0x38, 0x28, 0x43}, {0x00, 0x00, 0x00} };
 
-static const RGB* currentPalette = greyscalePalette;
+static const RGB* currentPalette = lospecPalette;
 void LCD::writeScanlineToFrame()
 {
 	// Read LCD control register
@@ -233,6 +232,11 @@ void LCD::writeScanlineToFrame()
 	{
 		for (int i = 0; i < 40; i++)
 		{
+			if (spritesDrawnThisScanline >= 10)
+			{
+				break;
+			}
+
 			uint8_t spriteY = m_memory->read(0xFE00 + (i * 4)) - 16;
 			uint8_t spriteX = m_memory->read(0xFE00 + (i * 4) + 1) - 8;
 			if (spriteY <= m_currentLine && (spriteY + (SpriteSize ? 16 : 8)) > m_currentLine &&
@@ -293,10 +297,6 @@ void LCD::writeScanlineToFrame()
 						}
 					}
 				}
-			}
-			if (spritesDrawnThisScanline >= 10)
-			{
-				break;
 			}
 		}
 	}

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <fstream>
 #include <cstdint>
 
 class Memory
@@ -8,10 +9,13 @@ public:
     Memory(uint8_t* cartridge, size_t cartridgeSize);
     ~Memory();
 
+    void updateRTC(double deltaTimeSeconds);
+
     uint8_t& read(size_t address);
     void write(size_t address, uint8_t value);
 
-    float* getBackgroundMap() { return m_background; }
+    void saveRamBanksToFile(std::ofstream& file);
+    void loadRamBanksFromFile(std::ifstream& file);
 
 private:
     uint8_t* m_cartridge;
@@ -45,6 +49,11 @@ private:
     uint8_t m_ramBank2[0x2000] = {};
     uint8_t m_ramBank3[0x2000] = {};
 
-    float m_background[256 * 256] = {};
-    float m_window[160 * 144] = {};
+    static const uint64_t RTCFrequencyHz = 32768 * 1024;
+    double m_rtcCounter = 0;
+    uint8_t m_rtcSeconds = 0;
+    uint8_t m_rtcMinutes = 0;
+    uint8_t m_rtcHours = 0;
+    uint8_t m_rtcLowerDayCounter = 0;
+    uint8_t m_rtcUpperDayCounter = 0;
 };

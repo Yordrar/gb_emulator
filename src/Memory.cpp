@@ -4,6 +4,7 @@
 
 #include <string>
 #include <algorithm>
+#include <format>
 
 Memory::Memory(uint8_t* cartridge, size_t cartridgeSize)
     : m_cartridge(cartridge)
@@ -17,9 +18,35 @@ Memory::~Memory()
 {
 }
 
-static uint8_t test = 0x90;
+void Memory::updateRTC(double deltaTimeSeconds)
+{
+    m_rtcCounter += deltaTimeSeconds;
+
+    if (m_rtcCounter >= 1.0)
+    {
+        m_rtcCounter = 0;
+        m_rtcSeconds++;
+        if (m_rtcSeconds >= 60)
+        {
+            m_rtcSeconds = 0;
+            m_rtcMinutes++;
+            if (m_rtcMinutes >= 60)
+            {
+                m_rtcMinutes = 0;
+                m_rtcHours++;
+                if (m_rtcHours >= 24)
+                {
+                    m_rtcHours = 0;
+                    m_rtcLowerDayCounter++;
+                }
+            }
+        }
+    }
+}
+
 uint8_t& Memory::read(size_t address)
 {
+    //if (address == 0x3cd1) OutputDebugStringA(std::format("Reading {:x}\n", m_memory[address]).c_str());
     // Reading from ROM bank
     if (address >= 0x4000 && address <= 0x7FFF)
     {
@@ -51,7 +78,32 @@ uint8_t& Memory::read(size_t address)
             return m_ramBank3[(address - 0xA000)];
             break;
         }
+        case 0x08:
+        {
+            return m_rtcSeconds;
+            break;
         }
+        case 0x09:
+        {
+            return m_rtcMinutes;
+            break;
+        }
+        case 0x0A:
+        {
+            return m_rtcHours;
+            break;
+        }
+        case 0x0B:
+        {
+            return m_rtcLowerDayCounter;
+            break;
+        }
+        case 0x0C:
+        {
+            return m_rtcUpperDayCounter;
+            break;
+        }
+        };
     }
 
     // Reading from Echo RAM
@@ -65,6 +117,7 @@ uint8_t& Memory::read(size_t address)
 
 void Memory::write(size_t address, uint8_t value)
 {
+    //if (address == (0x3cd1)) OutputDebugStringA(std::format("Writing {:x}\n", value).c_str());
     if (address >= 0x0000 && address <= 0x1FFF)
     {
         if ((value & 0x0F) == 0x0A)
@@ -80,7 +133,7 @@ void Memory::write(size_t address, uint8_t value)
 
     if (address >= 0x2000 && address <= 0x3FFF)
     {
-        uint8_t selectedRomBank = (value & 0xFF);
+        uint8_t selectedRomBank = value;
         if (selectedRomBank == 0)
         {
             selectedRomBank++;
@@ -91,7 +144,7 @@ void Memory::write(size_t address, uint8_t value)
 
     if (address >= 0x4000 && address <= 0x5FFF)
     {
-        m_currentRamBank = (value & 3);
+        m_currentRamBank = (value & 0x0F);
         return;
     }
 
@@ -127,6 +180,7 @@ void Memory::write(size_t address, uint8_t value)
             break;
         }
         }
+        return;
     }
 
     // Writing to Echo RAM
@@ -146,4 +200,20 @@ void Memory::write(size_t address, uint8_t value)
     }
 
     m_memory[address] = value;
+}
+
+void Memory::saveRamBanksToFile(std::ofstream& file)
+{
+    file.write(reinterpret_cast<char*>(m_ramBank0), 0x2000);
+    file.write(reinterpret_cast<char*>(m_ramBank1), 0x2000);
+    file.write(reinterpret_cast<char*>(m_ramBank2), 0x2000);
+    file.write(reinterpret_cast<char*>(m_ramBank3), 0x2000);
+}
+
+void Memory::loadRamBanksFromFile(std::ifstream& file)
+{
+    file.read(reinterpret_cast<char*>(m_ramBank0), 0x2000);
+    file.read(reinterpret_cast<char*>(m_ramBank1), 0x2000);
+    file.read(reinterpret_cast<char*>(m_ramBank2), 0x2000);
+    file.read(reinterpret_cast<char*>(m_ramBank3), 0x2000);
 }
