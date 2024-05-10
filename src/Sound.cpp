@@ -2,6 +2,8 @@
 
 #include <Windows.h>
 
+#include <cassert>
+
 #include "Memory.h"
 #include "CPU.h"
 
@@ -53,25 +55,24 @@ void Sound::update(uint64_t cyclesToEmulate)
     for (uint64_t i = 0; i < cyclesToEmulate; i++)
     {
         m_sampleClock++;
-
-        if (m_sampleClock % 8192 == 0)
+        if ((m_sampleClock % 8192) == 0)
         {
             m_frameSequencer = (m_frameSequencer + 1) & 7;
-            if ((m_frameSequencer % 1) == 0)
+            if ((m_frameSequencer & 1) == 0)
             {
                 handleLengthClock(m_ch1Enabled, m_ch1LengthEnabled, m_ch1LengthTimer);
                 handleLengthClock(m_ch2Enabled, m_ch2LengthEnabled, m_ch2LengthTimer);
                 handleLengthClock(m_ch3Enabled, m_ch3LengthEnabled, m_ch3LengthTimer);
                 handleLengthClock(m_ch4Enabled, m_ch4LengthEnabled, m_ch4LengthTimer);
             }
-            if (((m_frameSequencer - 2) % 4) == 0)
+            if (m_frameSequencer == 2 || m_frameSequencer == 6)
             {
                 // Only channel 1 has sweep
                 handleSweepClock();
             }
             if (m_frameSequencer == 7)
             {
-                handleEnvelopeClock(m_ch1PeriodTimer, m_ch1EnvelopeSweep, m_ch1CurrentVolume, m_ch1EnvelopeDirection);
+                handleEnvelopeClock(m_ch1PeriodTimer, m_ch1EnvelopePeriod, m_ch1CurrentVolume, m_ch1EnvelopeDirection);
                 handleEnvelopeClock(m_ch2PeriodTimer, m_ch2EnvelopeSweep, m_ch2CurrentVolume, m_ch2EnvelopeDirection);
                 handleEnvelopeClock(m_ch4PeriodTimer, m_ch4EnvelopeSweep, m_ch4CurrentVolume, m_ch4EnvelopeDirection);
             }
@@ -92,12 +93,11 @@ void Sound::update(uint64_t cyclesToEmulate)
                 uint8_t waveSampleCh2 = m_waveDutyTable[m_ch2WavePatternDuty][m_ch2DutyPosition] * m_ch2CurrentVolume;
                 float sampleCh2 = (waveSampleCh2 / 7.5f) - 1.0f;
 
-                uint8_t waveSampleCh3 = ( m_memory->read(0xFF30 + (m_ch3WavePosition / 2) ) >> (m_ch3WavePosition & 1) != 0 ? 0 : 4 ) & 0x0F;
-                waveSampleCh3 = waveSampleCh3 >> m_ch3OutputLevel;
+                uint8_t waveSampleCh3 = ( m_memory->read(0xFF30 + (m_ch3WavePosition / 2) ) >> ((m_ch3WavePosition & 1) != 0 ? 0 : 4) ) & 0x0F;
+                waveSampleCh3 = waveSampleCh3 >> (m_ch3OutputLevel != 4 ? 0 : m_ch3OutputLevel); // output level seems to mute this channel a lot, possible bug?
                 float sampleCh3 = (waveSampleCh3 / 7.5f) - 1.0f;
 
-                float sampleCh4 = static_cast<float>((~m_LFSR) & 1);
-                sampleCh4 *= m_ch4CurrentVolume;
+                float sampleCh4 = static_cast<float>( ((~m_LFSR) & 1) * m_ch4CurrentVolume );
                 sampleCh4 = (sampleCh4 / 7.5f) - 1.0f;
 
                 float leftSample =
@@ -120,7 +120,7 @@ void Sound::update(uint64_t cyclesToEmulate)
             }
             if (m_audioDataBufferSampleCount >= sc_AudioDataBufferSize)
             {
-                while (SDL_GetQueuedAudioSize(m_audioDevice) > (sc_AudioDataBufferSize * sizeof(float) * 2))
+                while (SDL_GetQueuedAudioSize(m_audioDevice) > (sc_AudioDataBufferSize * sizeof(float) * 4))
                 {
                     Sleep(1);
                 }
@@ -142,10 +142,13 @@ void Sound::updateChannel1Data()
     uint8_t NR13 = m_memory->read(0xFF13);
     uint8_t NR14 = m_memory->read(0xFF14);
 
+    m_ch1SweepTime = (NR10 >> 4) & 0x7;
+    m_ch1SweepDecrease = (NR10 >> 3) & 0x1;
+    m_ch1SweepShift = NR10 & 0x7;
     m_ch1WavePatternDuty = (NR11 >> 6) & 0x3;
     m_ch1EnvelopeInitial = (NR12 & 0xF0) >> 4;
     m_ch1EnvelopeDirection = (NR12 & 0x08) >> 3;
-    m_ch1EnvelopeSweep = (NR12 & 0x07);
+    m_ch1EnvelopePeriod = (NR12 & 0x07);
     m_ch1Frequency = (uint64_t(NR13) >> 0) | (uint64_t(NR14 & 7) << 8);
     m_ch1LengthEnabled = (NR14 & 0x4) >> 6;
 
@@ -158,17 +161,17 @@ void Sound::updateChannel1Data()
             m_ch1LengthTimer = 64;
         }
         m_ch1FrequencyTimer = ((2048 - m_ch1Frequency) * 4);
-        m_ch1PeriodTimer = m_ch1EnvelopeSweep;
+        m_ch1PeriodTimer = m_ch1EnvelopePeriod;
         m_ch1CurrentVolume = m_ch1EnvelopeInitial;
         m_ch1ShadowFrequency = m_ch1Frequency;
         m_ch1SweepTimer = m_ch1SweepTime == 0 ? 8 : m_ch1SweepTime;
         m_ch1SweepEnabled == (m_ch1SweepTime != 0) || (m_ch1SweepShift != 0) ? 1 : 0;
-        if (m_ch1SweepShift != 0 && m_ch1Frequency > 2047)
+        if (m_ch1SweepShift > 0)
         {
-            m_ch1Enabled = 0;
+            calculateCh1NewFrequencyAndOverflowCheck();
         }
     }
-    if ((NR11 & 0b00111111) != 0 && (NR14 & 0x40) != 0)
+    if ((NR11 & 0b00111111) != 0 && m_ch1LengthEnabled)
     {
         m_ch1SoundLength = 64 - (NR11 & 0b00111111);
         m_memory->write(0xFF16, NR11 & 0b11000000);
@@ -202,7 +205,7 @@ void Sound::updateChannel2Data()
         m_ch2PeriodTimer = m_ch2EnvelopeSweep;
         m_ch2CurrentVolume = m_ch2EnvelopeInitial;
     }
-    if ((NR21 & 0b00111111) != 0 && (NR24 & 0x40) != 0)
+    if ((NR21 & 0b00111111) != 0 && m_ch2LengthEnabled)
     {
         m_ch2SoundLength = 64 - (NR21 & 0b00111111);
         m_memory->write(0xFF16, NR21 & 0b11000000);
@@ -232,6 +235,9 @@ void Sound::updateChannel3Data()
         break;
     case 3:
         m_ch3OutputLevel = 2;
+        break;
+    default:
+        assert(false);
         break;
     }
     m_ch3Frequency = (uint64_t(NR33) >> 0) | (uint64_t(NR34 & 7) << 8);
@@ -367,28 +373,15 @@ void Sound::handleSweepClock()
             m_ch1SweepTimer = m_ch1SweepTime == 0 ? 8 : m_ch1SweepTime;
             if (m_ch1SweepEnabled && m_ch1SweepTime != 0)
             {
-                uint64_t newFrequency = m_ch1ShadowFrequency >> m_ch1SweepShift;
-
-                if (m_ch1SweepDecrease)
-                {
-                    newFrequency = m_ch1ShadowFrequency - newFrequency;
-                }
-                else
-                {
-                    newFrequency = m_ch1ShadowFrequency + newFrequency;
-                }
-
-                if (newFrequency > 2047)
-                {
-                    m_ch1Enabled = 0;
-                }
+                uint64_t newFrequency = calculateCh1NewFrequencyAndOverflowCheck();
 
                 if (newFrequency <= 2047 && m_ch1SweepShift > 0)
                 {
                     m_ch1Frequency = newFrequency;
                     m_ch1ShadowFrequency = newFrequency;
-                }
 
+                    calculateCh1NewFrequencyAndOverflowCheck();
+                }
             }
         }
     }
@@ -397,8 +390,7 @@ void Sound::handleSweepClock()
 void Sound::handleLengthClock(uint8_t& channelEnabled, uint8_t& lengthEnabled, uint8_t& lengthCounter)
 {
     if (lengthEnabled != 0 && lengthCounter > 0) {
-        lengthCounter -= 1;
-
+        lengthCounter--;
         if (lengthCounter == 0) {
             channelEnabled = 0;
         }
@@ -408,10 +400,30 @@ void Sound::handleLengthClock(uint8_t& channelEnabled, uint8_t& lengthEnabled, u
 void Sound::handleLengthClock(uint8_t& channelEnabled, uint8_t& lengthEnabled, uint16_t& lengthCounter)
 {
     if (lengthEnabled != 0 && lengthCounter > 0) {
-        lengthCounter -= 1;
-
+        lengthCounter--;
         if (lengthCounter == 0) {
             channelEnabled = 0;
         }
     }
+}
+
+uint64_t Sound::calculateCh1NewFrequencyAndOverflowCheck()
+{
+    uint64_t newFrequency = m_ch1ShadowFrequency >> m_ch1SweepShift;
+
+    if (m_ch1SweepDecrease)
+    {
+        newFrequency = m_ch1ShadowFrequency - newFrequency;
+    }
+    else
+    {
+        newFrequency = m_ch1ShadowFrequency + newFrequency;
+    }
+
+    if (newFrequency > 2047)
+    {
+        m_ch1Enabled = 0;
+    }
+
+    return newFrequency;
 }

@@ -9,7 +9,7 @@ workspace "gb_emulator"
 	staticruntime "on"
 	flags "MultiProcessorCompile"
 	floatingpoint "fast"
-	flags {"NoRuntimeChecks", "NoBufferSecurityCheck"}
+	flags {"NoRuntimeChecks", "NoBufferSecurityCheck", "NoImportLib"}
 	
 filter "Debug"
 	runtime "Debug"

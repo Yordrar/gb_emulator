@@ -50,6 +50,8 @@ void Emulator::openRomFile(char const* romFilename)
         return;
     }
 
+    saveBatteryBackedRamToFile();
+
     m_romFilename = romFilename;
 
     m_cartridgeSize = std::filesystem::file_size(romFilename);
@@ -83,23 +85,16 @@ void Emulator::emulate()
 
     auto elapsedNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     double deltaTimeSeconds = std::chrono::abs(elapsedNanoseconds).count() / 1000000000.0;
-    //OutputDebugStringA(std::format("{:f}\n", deltaTimeSeconds).c_str());
 
     if (deltaTimeSeconds != 0.0)
     {
         m_memory->updateRTC(deltaTimeSeconds);
     }
 
-    uint64_t elapsedCPUCycles = static_cast<uint64_t>(deltaTimeSeconds * CPU::FrequencyHz);
-    uint64_t totalExecutedCycles = 0;
-    while (totalExecutedCycles < elapsedCPUCycles)
-    {
-        uint64_t executedCycles = m_cpu->executeInstruction();
-        totalExecutedCycles += executedCycles;
-        m_sound->update(executedCycles);
-        m_timer->update(executedCycles);
-        m_lcd->update(executedCycles);
-    }
+    uint64_t executedCycles = m_cpu->executeInstruction();
+    m_sound->update(executedCycles);
+    m_timer->update(executedCycles);
+    m_lcd->update(executedCycles);
 
     start = std::chrono::high_resolution_clock::now();
 }

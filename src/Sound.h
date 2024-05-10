@@ -29,6 +29,7 @@ private:
     void handleSweepClock();
     void handleLengthClock(uint8_t& channelEnabled, uint8_t& lengthEnabled, uint8_t& lengthCounter);
     void handleLengthClock(uint8_t& channelEnabled, uint8_t& lengthEnabled, uint16_t& lengthCounter);
+    uint64_t calculateCh1NewFrequencyAndOverflowCheck();
 
     Memory* m_memory;
 
@@ -43,9 +44,9 @@ private:
     uint64_t m_sampleClock = 0;
     uint8_t m_waveDutyTable[4][8] = {
         0,0,0,0,0,0,0,1,
-        0,0,0,0,0,0,1,1,
-        0,0,0,0,1,1,1,1,
-        0,0,1,1,1,1,1,1,
+        1,0,0,0,0,0,0,1,
+        1,0,0,0,0,1,1,1,
+        0,1,1,1,1,1,1,0,
     };
 
     // Channel 1 data
@@ -70,7 +71,7 @@ private:
 
     uint8_t m_ch1EnvelopeInitial = 0;
     uint8_t m_ch1EnvelopeDirection = 0;
-    uint8_t m_ch1EnvelopeSweep = 0;
+    uint8_t m_ch1EnvelopePeriod = 0;
     int64_t m_ch1PeriodTimer = 0;
     uint8_t m_ch1CurrentVolume = 0;
 
