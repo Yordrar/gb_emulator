@@ -46,7 +46,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
         hPrevInstance,
         pCmdLine,
         nShowCmd,
-        "Game Boy Emulator",
+        "GB Emulator",
         160 * windowScale,
         144 * windowScale);
 
@@ -152,7 +152,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     {
         emulator.emulate();
 
-        //if (ResourceManager::it().getResourceNeedsCopyToGPU(frameTexture))
+        if (ResourceManager::it().getResourceNeedsCopyToGPU(frameTexture))
         {
             renderer->beginFrame();
             renderer->submitRenderPass(mainPass, *scene, { &scene->getCamera() });

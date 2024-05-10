@@ -81,8 +81,9 @@ void Emulator::emulate()
 
     end = std::chrono::high_resolution_clock::now();
 
-    auto elapsedMilliseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
-    double deltaTimeSeconds = std::chrono::abs(elapsedMilliseconds).count() / 1000000000.0;
+    auto elapsedNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+    double deltaTimeSeconds = std::chrono::abs(elapsedNanoseconds).count() / 1000000000.0;
+    //OutputDebugStringA(std::format("{:f}\n", deltaTimeSeconds).c_str());
 
     if (deltaTimeSeconds != 0.0)
     {
@@ -95,9 +96,9 @@ void Emulator::emulate()
     {
         uint64_t executedCycles = m_cpu->executeInstruction();
         totalExecutedCycles += executedCycles;
+        m_sound->update(executedCycles);
         m_timer->update(executedCycles);
         m_lcd->update(executedCycles);
-        m_sound->update(executedCycles);
     }
 
     start = std::chrono::high_resolution_clock::now();
