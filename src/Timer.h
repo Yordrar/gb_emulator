@@ -19,6 +19,7 @@ private:
     CPU* m_cpu;
     Memory* m_memory;
 
-    double m_dividerRegister;
-    double m_timerCounter;
+    uint64_t m_timerClock;
+    uint8_t m_dividerRegister;
+    uint32_t m_timerCounter;
 };

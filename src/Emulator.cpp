@@ -115,7 +115,7 @@ void Emulator::saveBatteryBackedRamToFile()
 {
     if (!m_cartridge) return;
 
-    std::string savFilename = m_romFilename.substr(0, m_romFilename.size() - 2)+"sav";
+    std::string savFilename = m_romFilename.substr(0, m_romFilename.size() - 2) + "sav";
     std::ofstream file(savFilename, std::fstream::out | std::fstream::binary | std::fstream::trunc);
     m_memory->saveRamBanksToFile(file);
 }
@@ -124,7 +124,7 @@ void Emulator::loadSavFileToRam()
 {
     if (!m_cartridge) return;
 
-    std::string savFilename = m_romFilename.substr(0, m_romFilename.size() - 2)+"sav";
+    std::string savFilename = m_romFilename.substr(0, m_romFilename.size() - 2) + "sav";
 
     if (!std::filesystem::exists(savFilename))
     {

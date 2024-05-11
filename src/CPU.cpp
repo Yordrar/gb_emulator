@@ -46,7 +46,7 @@ CPU::CPU(Memory* memory, Joypad* joypad)
     memory->write(0xFF23, 0xBF); // NR30
     memory->write(0xFF24, 0x77); // NR50
     memory->write(0xFF25, 0xF3); // NR51
-    memory->write(0xFF26, 0x71); // NR52
+    memory->write(0xFF26, 0x71); // NR52, it's supposed to be 0xF1 but emulator emits a beep before the game configures the audio registers so start with sound disabled
     memory->write(0xFF40, 0x91); // LCDC
     memory->write(0xFF42, 0x00); // SCY
     memory->write(0xFF43, 0x00); // SCX
