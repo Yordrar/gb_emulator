@@ -22,7 +22,15 @@ public:
     struct CartridgeInfo
     {
         std::string m_name;
+        bool m_isColorGB;
+        bool m_hasSGBFunctions;
         uint8_t m_type;
+        uint64_t m_romSize;
+        uint64_t m_numRomBanks;
+        uint64_t m_ramSize;
+        uint64_t m_numRamBanks;
+
+        std::string getCartridgeTypeStr() const;
     };
 
     void openRomFile(char const* romFilename);
@@ -35,6 +43,8 @@ public:
     void loadSavFileToRam();
 
 private:
+    void extractCartridgeInfo();
+
     ResourceHandle m_frameTexture;
     uint8_t* m_frameTextureData;
 

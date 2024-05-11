@@ -11,7 +11,7 @@ Memory::Memory(uint8_t* cartridge, size_t cartridgeSize)
     , m_cartridgeSize(cartridgeSize)
     , m_currentRomBank(1)
 {
-    std::memcpy(m_memory, m_cartridge, std::min(0x3FFF, static_cast<int>(m_cartridgeSize)));
+    std::memcpy(m_memory, m_cartridge, std::min(0x7FFF, static_cast<int>(m_cartridgeSize)));
 }
 
 Memory::~Memory()
@@ -117,7 +117,6 @@ uint8_t& Memory::read(size_t address)
 
 void Memory::write(size_t address, uint8_t value)
 {
-    //if (address == (0x3cd1)) OutputDebugStringA(std::format("Writing {:x}\n", value).c_str());
     if (address >= 0x0000 && address <= 0x1FFF)
     {
         if ((value & 0x0F) == 0x0A)
@@ -133,7 +132,7 @@ void Memory::write(size_t address, uint8_t value)
 
     if (address >= 0x2000 && address <= 0x3FFF)
     {
-        uint8_t selectedRomBank = value;
+        uint8_t selectedRomBank = (value & 0x7F);
         if (selectedRomBank == 0)
         {
             selectedRomBank++;
@@ -177,6 +176,31 @@ void Memory::write(size_t address, uint8_t value)
         case 3:
         {
             m_ramBank3[(address - 0xA000)] = value;
+            break;
+        }
+        case 0x08:
+        {
+            m_rtcSeconds = value;
+            break;
+        }
+        case 0x09:
+        {
+            m_rtcMinutes = value;
+            break;
+        }
+        case 0x0A:
+        {
+            m_rtcHours = value;
+            break;
+        }
+        case 0x0B:
+        {
+            m_rtcLowerDayCounter = value;
+            break;
+        }
+        case 0x0C:
+        {
+            m_rtcUpperDayCounter = value;
             break;
         }
         }

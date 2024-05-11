@@ -120,7 +120,7 @@ void Sound::update(uint64_t cyclesToEmulate)
             }
             if (m_audioDataBufferSampleCount >= sc_AudioDataBufferSize)
             {
-                while (SDL_GetQueuedAudioSize(m_audioDevice) > (sc_AudioDataBufferSize * sizeof(float) * 4))
+                while (SDL_GetQueuedAudioSize(m_audioDevice) > (sc_AudioDataBufferSize * sizeof(float) * 2))
                 {
                     Sleep(1);
                 }

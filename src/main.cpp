@@ -13,6 +13,7 @@ using namespace Microsoft::WRL;
 // Std
 #include <string>
 #include <chrono>
+#include <format>
 
 // Renderer
 #include <Utils.h>
@@ -40,7 +41,7 @@ struct Vertex
 uint8_t frameTextureData[160*144*4] = {0};
 int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ PWSTR pCmdLine, _In_ int nShowCmd)
 {
-    unsigned int windowScale = 5;
+    unsigned int windowScale = 6;
 
     Window window(hInstance,
         hPrevInstance,
@@ -126,7 +127,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     }
 
     // TODO implement UI for loading ROMs
-    bool show_window = false;
+    bool show_window = true;
     renderer->registerImguiCallback([&show_window, &renderer, &mainPass, &emulator]()
         {
             if (show_window)
@@ -134,7 +135,27 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
                 Emulator::CartridgeInfo cartInfo = emulator.getCartridgeInfo();
                 ImGui::Begin("Cartridge Info", &show_window);
                 ImGui::Text("Name: %s", cartInfo.m_name.c_str());
-                ImGui::Text("Type: 0x%x", cartInfo.m_type);
+                ImGui::Text("Is CGB: %s", cartInfo.m_isColorGB ? "yes" : "no");
+                ImGui::Text("Has SGB Functions: %s", cartInfo.m_hasSGBFunctions ? "yes" : "no");
+                ImGui::Text("Type: %s", cartInfo.getCartridgeTypeStr().c_str());
+                if (cartInfo.m_romSize / 1024 >= 1024)
+                {
+                    ImGui::Text("ROM Size: %dMB", cartInfo.m_romSize / (1024*1024));
+                }
+                else
+                {
+                    ImGui::Text("ROM Size: %dKB", cartInfo.m_romSize / 1024);
+                }
+                ImGui::Text("Num. ROM Banks: %d", cartInfo.m_numRomBanks);
+                if (cartInfo.m_ramSize / 1024 >= 1024)
+                {
+                    ImGui::Text("RAM Size: %dMB", cartInfo.m_ramSize / (1024 * 1024));
+                }
+                else
+                {
+                    ImGui::Text("RAM Size: %dKB", cartInfo.m_ramSize / 1024);
+                }
+                ImGui::Text("Num. RAM Banks: %d", cartInfo.m_numRamBanks);
                 ImGui::End();
             }
         });

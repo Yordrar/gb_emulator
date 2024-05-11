@@ -76,7 +76,7 @@ void LCD::update(uint64_t cyclesToEmulate)
 				m_memory->write(0xFF41, (m_memory->read(0xFF41) & 0b11111100) | 1);
 				if (VBlankInterruptEnable)
 				{
-					//m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
+					m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
 					m_cpu->requestInterrupt(CPU::Interrupt::VBlank);
 				}
 				m_frameTexture.setNeedsCopyToGPU();
