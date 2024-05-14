@@ -31,10 +31,12 @@ RenderPass::~RenderPass()
 
 void RenderPass::record( Renderer& renderer, ComPtr<ID3D12GraphicsCommandList> commandList, Scene& scene, std::vector<Camera*> const& cameras )
 {
+#ifdef RENDERER_DEBUG
     if (m_profilerQueryIndex == -1)
     {
         m_profilerQueryIndex = renderer.getProfiler().allocateQueryIndex();
     }
+#endif
 
     Descriptor renderTarget;
     if (m_renderTarget.isValid())
@@ -66,11 +68,15 @@ void RenderPass::record( Renderer& renderer, ComPtr<ID3D12GraphicsCommandList> c
         m_passBufferDescriptor = ResourceManager::it().getShaderResourceView( m_passBuffer, srvDesc );
     }
 
+#ifdef RENDERER_DEBUG
     renderer.getProfiler().startQuery( commandList.Get(), m_profilerQueryIndex );
+#endif
 
     ResourceManager::it().copyResourcesToGPU( commandList );
 
+#ifdef RENDERER_DEBUG
     PIXBeginEvent( commandList.Get(), PIX_COLOR_DEFAULT, m_name.c_str() );
+#endif
 
     // Set viewport
     D3D12_VIEWPORT viewport = CD3DX12_VIEWPORT(ResourceManager::it().getD3DResource(renderTarget.getResourceHandle()).Get() );
@@ -144,10 +150,6 @@ void RenderPass::record( Renderer& renderer, ComPtr<ID3D12GraphicsCommandList> c
         {
             br.recordBarrierTransition(camera->getGPUBufferResource(), D3D12_RESOURCE_STATE_COMMON);
             commandList->SetGraphicsRoot32BitConstant(0, camera->getCameraBufferDescriptor().getDescriptorIndex(), 1);
-            if ( currentMesh->isAABBValid() && !camera->isAABBVisible( currentMesh->getAABB() ) )
-            {
-                continue;
-            }
 
             std::wstring const& currentMeshMaterialName = currentMesh->getMaterialName();
             if ( currentMaterialName != currentMeshMaterialName )
@@ -182,10 +184,12 @@ void RenderPass::record( Renderer& renderer, ComPtr<ID3D12GraphicsCommandList> c
         }
     }
 
+#ifdef RENDERER_DEBUG
     PIXEndEvent( commandList.Get() );
 
     renderer.getProfiler().endQuery( commandList.Get(), m_profilerQueryIndex );
     m_executionTimeInMilliseconds = renderer.getProfiler().getResolvedQuery( m_profilerQueryIndex );
+#endif
 }
 
 void RenderPass::addResourceView( Descriptor const& descriptor )

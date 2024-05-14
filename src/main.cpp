@@ -162,11 +162,11 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 
     window.onKeyboardButtonDown([&emulator](WPARAM wParam, LPARAM lParam)
         {
-            emulator.processInput(wParam, lParam);
+            emulator.processKeyboardInput(wParam, lParam);
         });
     window.onKeyboardButtonUp([&emulator](WPARAM wParam, LPARAM lParam)
         {
-            emulator.processInput(wParam, lParam);
+            emulator.processKeyboardInput(wParam, lParam);
         });
 
     while (!window.shouldCloseWindow())

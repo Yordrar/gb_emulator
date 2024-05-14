@@ -14,6 +14,7 @@ public:
     uint8_t& read(size_t address);
     void write(size_t address, uint8_t value);
 
+    bool areRamBanksDirty() const { return m_ramBanksDirty; }
     void saveRamBanksToFile(std::ofstream& file);
     void loadRamBanksFromFile(std::ifstream& file);
 
@@ -48,6 +49,7 @@ private:
     uint8_t m_ramBank1[0x2000] = {};
     uint8_t m_ramBank2[0x2000] = {};
     uint8_t m_ramBank3[0x2000] = {};
+    bool m_ramBanksDirty = false;
 
     static const uint64_t RTCFrequencyHz = 32768 * 1024;
     double m_rtcCounter = 0;

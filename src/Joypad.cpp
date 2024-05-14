@@ -1,6 +1,7 @@
 #include "Joypad.h"
 
 #include <Windows.h>
+#include <Xinput.h>
 #include <format>
 
 #include "Memory.h"
@@ -15,14 +16,17 @@ Joypad::Joypad(Memory* memory)
     , m_BPressed(1)
     , m_startPressed(1)
     , m_selectPressed(1)
+    , m_controllerPollingThread(&Joypad::pollControllerInput, this)
 {
 }
 
 Joypad::~Joypad()
 {
+    m_continueControllerPollingThread = false;
+    m_controllerPollingThread.join();
 }
 
-bool Joypad::updateJOYP()
+bool Joypad::updateJOYPRegister()
 {
     uint8_t JOYP = m_memory->read(0xFF00);
     bool selectButtonKeys = !(JOYP & 0b00100000);
@@ -48,8 +52,10 @@ bool Joypad::updateJOYP()
     return (JOYP & 0x0F) != (newJOYP & 0x0F);
 }
 
-void Joypad::processInput(WPARAM wParam, LPARAM lParam)
+void Joypad::processKeyboardInput(WPARAM wParam, LPARAM lParam)
 {
+    m_currentInputDeviceType = InputDeviceType::Keyboard;
+
     switch (wParam)
     {
     case VK_DOWN:
@@ -86,5 +92,55 @@ void Joypad::processInput(WPARAM wParam, LPARAM lParam)
         break;
     default:
         break;
+    }
+}
+
+void Joypad::pollControllerInput()
+{
+    while (m_continueControllerPollingThread)
+    {
+        XINPUT_STATE controllerState;
+        if (XInputGetState(0, &controllerState) == ERROR_SUCCESS)
+        {
+            if (m_currentInputDeviceType == InputDeviceType::Controller)
+            {
+                m_APressed = (controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_A) ? 0 : 1;
+                m_BPressed = (controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_B) ? 0 : 1;
+                m_startPressed = (controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_START) ? 0 : 1;
+                m_selectPressed = (controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_BACK) ? 0 : 1;
+                m_downPressed = (controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN) ? 0 : 1;
+                m_upPressed = (controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP) ? 0 : 1;
+                m_leftPressed = (controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT) ? 0 : 1;
+                m_rightPressed = (controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT) ? 0 : 1;
+            }
+            if (controllerState.Gamepad.wButtons != 0 && m_currentInputDeviceType != InputDeviceType::Controller)
+            {
+                m_currentInputDeviceType = InputDeviceType::Controller;
+            }
+
+            // TODO maybe add joystick controls?
+            /*float LX = controllerState.Gamepad.sThumbLX;
+            float LY = controllerState.Gamepad.sThumbLY;
+
+            float magnitude = sqrt(LX * LX + LY * LY);
+
+            float normalizedLX = LX / magnitude;
+            float normalizedLY = LY / magnitude;
+
+            if (magnitude > XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE)
+            {
+                m_downPressed = normalizedLY < 0 ? 0 : 1;
+                m_upPressed = normalizedLY > 0 ? 0 : 1;
+                m_leftPressed = normalizedLX < 0 ? 0 : 1;
+                m_rightPressed = normalizedLX > 0 ? 0 : 1;
+            }
+            else
+            {
+                m_downPressed = 1;
+                m_upPressed = 1;
+                m_leftPressed = 1;
+                m_rightPressed = 1;
+            }*/
+        }
     }
 }

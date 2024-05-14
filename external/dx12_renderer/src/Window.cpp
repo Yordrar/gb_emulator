@@ -93,7 +93,7 @@ Renderer* Window::getRenderer() const
 
 bool Window::shouldCloseWindow() const
 {
-    if (PeekMessage((LPMSG)&m_windowMsg, NULL, 0, 0, PM_REMOVE))
+    if (PeekMessage((LPMSG)&m_windowMsg, NULL, 0, 0, PM_QS_INPUT | PM_REMOVE))
     {
         TranslateMessage(&m_windowMsg);
         DispatchMessage(&m_windowMsg);
@@ -147,6 +147,11 @@ void Window::onKeyboardCharacter(WindowMessageCallback const& msgCallback)
     m_msgToCallbackMap[WM_CHAR] = msgCallback;
 }
 
+void Window::onInput(WindowMessageCallback const& msgCallback)
+{
+    m_msgToCallbackMap[WM_INPUT] = msgCallback;
+}
+
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT Window::windowCallback(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -184,6 +189,7 @@ LRESULT Window::windowCallback(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
     case WM_KEYUP:
     case WM_KEYDOWN:
     case WM_CHAR:
+    case WM_INPUT:
         if (m_msgToCallbackMap.find(message) != m_msgToCallbackMap.end())
         {
             m_msgToCallbackMap[message](wParam, lParam);

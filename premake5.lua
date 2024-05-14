@@ -45,7 +45,7 @@ project "gb_emulator"
 		"src/**.cpp",
 	}
 	libdirs {"external/SDL2-2.30.3/lib/x64/", "external/"}
-	links { "dx12_renderer", "SDL2" }
+	links { "dx12_renderer", "SDL2", "Xinput" }
 	defines { "NOMINMAX", "WIN32_LEAN_AND_MEAN" }
 	includedirs { 
 		"src",

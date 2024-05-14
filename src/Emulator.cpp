@@ -59,7 +59,7 @@ void Emulator::openRomFile(char const* romFilename)
         return;
     }
 
-    saveBatteryBackedRamToFile();
+    saveBatteryBackedRamToFile(); // Save ram to file in case we had another game opened before this
 
     m_romFilename = romFilename;
 
@@ -81,7 +81,7 @@ void Emulator::openRomFile(char const* romFilename)
     loadSavFileToRam();
 }
 
-static int a = 0;
+static double saveTimer = 0.0;
 void Emulator::emulate()
 {
     if (!m_cartridge) return;
@@ -90,6 +90,8 @@ void Emulator::emulate()
 
     auto elapsedNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     double deltaTimeSeconds = std::chrono::abs(elapsedNanoseconds).count() / 1000000000.0;
+
+    saveTimer += deltaTimeSeconds;
 
     if (deltaTimeSeconds != 0.0)
     {
@@ -101,14 +103,23 @@ void Emulator::emulate()
     m_timer->update(executedCycles);
     m_lcd->update(executedCycles);
 
+    if (saveTimer >= 1.0)
+    {
+        saveTimer = 0.0;
+        if (m_memory->areRamBanksDirty())
+        {
+            saveBatteryBackedRamToFile();
+        }
+    }
+
     start = std::chrono::high_resolution_clock::now();
 }
 
-void Emulator::processInput(WPARAM wParam, LPARAM lParam)
+void Emulator::processKeyboardInput(WPARAM wParam, LPARAM lParam)
 {
     if (!m_cartridge) return;
 
-    m_joypad->processInput(wParam, lParam);
+    m_joypad->processKeyboardInput(wParam, lParam);
 }
 
 void Emulator::saveBatteryBackedRamToFile()

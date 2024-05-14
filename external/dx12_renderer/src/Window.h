@@ -30,6 +30,7 @@ public:
     void onKeyboardButtonDown(WindowMessageCallback const& msgCallback);
     void onKeyboardButtonUp(WindowMessageCallback const& msgCallback);
     void onKeyboardCharacter(WindowMessageCallback const& msgCallback);
+    void onInput(WindowMessageCallback const& msgCallback);
 
 private:
     LRESULT CALLBACK windowCallback(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);

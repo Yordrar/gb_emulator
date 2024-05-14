@@ -159,51 +159,39 @@ void Memory::write(size_t address, uint8_t value)
         switch (m_currentRamBank)
         {
         case 0:
-        {
             m_ramBank0[(address - 0xA000)] = value;
             break;
-        }
         case 1:
-        {
             m_ramBank1[(address - 0xA000)] = value;
             break;
-        }
         case 2:
-        {
             m_ramBank2[(address - 0xA000)] = value;
             break;
-        }
         case 3:
-        {
             m_ramBank3[(address - 0xA000)] = value;
             break;
-        }
         case 0x08:
-        {
             m_rtcSeconds = value;
             break;
-        }
         case 0x09:
-        {
             m_rtcMinutes = value;
             break;
-        }
         case 0x0A:
-        {
             m_rtcHours = value;
             break;
-        }
         case 0x0B:
-        {
             m_rtcLowerDayCounter = value;
             break;
-        }
         case 0x0C:
-        {
             m_rtcUpperDayCounter = value;
             break;
         }
+
+        if (m_currentRamBank >= 0 && m_currentRamBank <= 3)
+        {
+            m_ramBanksDirty = true;
         }
+
         return;
     }
 
@@ -232,6 +220,8 @@ void Memory::saveRamBanksToFile(std::ofstream& file)
     file.write(reinterpret_cast<char*>(m_ramBank1), 0x2000);
     file.write(reinterpret_cast<char*>(m_ramBank2), 0x2000);
     file.write(reinterpret_cast<char*>(m_ramBank3), 0x2000);
+    
+    m_ramBanksDirty = false;
 }
 
 void Memory::loadRamBanksFromFile(std::ifstream& file)
@@ -240,4 +230,6 @@ void Memory::loadRamBanksFromFile(std::ifstream& file)
     file.read(reinterpret_cast<char*>(m_ramBank1), 0x2000);
     file.read(reinterpret_cast<char*>(m_ramBank2), 0x2000);
     file.read(reinterpret_cast<char*>(m_ramBank3), 0x2000);
+
+    m_ramBanksDirty = false;
 }

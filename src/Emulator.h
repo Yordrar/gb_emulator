@@ -37,7 +37,7 @@ public:
     CartridgeInfo getCartridgeInfo() const { return m_cartridgeInfo; }
 
     void emulate();
-    void processInput(WPARAM wParam, LPARAM lParam);
+    void processKeyboardInput(WPARAM wParam, LPARAM lParam);
 
     void saveBatteryBackedRamToFile();
     void loadSavFileToRam();

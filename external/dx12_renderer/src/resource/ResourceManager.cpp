@@ -255,7 +255,9 @@ void ResourceManager::copyResourcesToGPU( ComPtr<ID3D12GraphicsCommandList> comm
 
     if (resourcesToCopy.size() > 0 )
     {
+#ifdef RENDERER_DEBUG
         PIXScopedEvent(commandList.Get(), PIX_COLOR_DEFAULT, "Copy resources to GPU");
+#endif
 
         if (preCopyBarriers.size() > 0)
         {

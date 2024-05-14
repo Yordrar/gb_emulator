@@ -1063,7 +1063,7 @@ uint64_t CPU::executeInstruction()
     case 0xE0:
         offset = m_memory->read(m_registers.PC++);
         m_memory->write(0xFF00 + offset, m_registers.A);
-        if (offset == 0x00 && m_joypad->updateJOYP())
+        if (offset == 0x00 && m_joypad->updateJOYPRegister())
         {
             requestInterrupt(Interrupt::JoyPad);
         }

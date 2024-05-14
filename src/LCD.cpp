@@ -279,15 +279,15 @@ void LCD::writeScanlineToFrame()
 					}
 					if ((spriteX + j) >= 0 && (spriteX + j) < 160)
 					{
-						uint8_t spriteLSB = m_memory->read(beginSpriteTileData + (spriteTile << 4) + (spriteOffsetY << 1));
-						uint8_t spriteMSB = m_memory->read(beginSpriteTileData + (spriteTile << 4) + (spriteOffsetY << 1) + 1);
-						uint8_t paletteIdx = (((spriteMSB & (1 << spriteOffsetX)) >> spriteOffsetX) << 1) | (((spriteLSB & (1 << spriteOffsetX)) >> spriteOffsetX));
-						uint8_t paletteColor = (paletteColors >> (paletteIdx * 2)) & 3;
-						if (paletteIdx != 0)
+						if (!OBJtoBGPriority
+							||
+							(OBJtoBGPriority && m_frameTextureData[(m_currentLine * 160 + spriteX + j) * 4] == currentPalette[m_memory->read(0xFF47)&3].r))
 						{
-							if (!OBJtoBGPriority
-								||
-								(OBJtoBGPriority && m_frameTextureData[(m_currentLine * 160 + spriteX + j) * 4] == currentPalette[m_memory->read(0xFF47)&3].r))
+							uint8_t spriteLSB = m_memory->read(beginSpriteTileData + (spriteTile << 4) + (spriteOffsetY << 1));
+							uint8_t spriteMSB = m_memory->read(beginSpriteTileData + (spriteTile << 4) + (spriteOffsetY << 1) + 1);
+							uint8_t paletteIdx = (((spriteMSB & (1 << spriteOffsetX)) >> spriteOffsetX) << 1) | (((spriteLSB & (1 << spriteOffsetX)) >> spriteOffsetX));
+							uint8_t paletteColor = (paletteColors >> (paletteIdx * 2)) & 3;
+							if (paletteIdx != 0)
 							{
 								m_frameTextureData[(m_currentLine * 160 + spriteX + j) * 4] = currentPalette[paletteColor].r;
 								m_frameTextureData[(m_currentLine * 160 + spriteX + j) * 4 + 1] = currentPalette[paletteColor].g;

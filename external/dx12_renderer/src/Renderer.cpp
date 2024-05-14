@@ -242,11 +242,15 @@ void Renderer::beginFrame()
 
     m_gpuFrameTime = 0;
 
+#ifdef RENDERER_DEBUG
     ImGui_ImplDX12_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ImGui::NewFrame();
+#endif
 
+#ifdef RENDERER_DEBUG
     start = std::chrono::high_resolution_clock::now();
+#endif
 
     ComPtr<ID3D12CommandAllocator> currentFrameCommandAllocator = m_graphicsCommandAllocators[ getCurrentBackbufferIndex() ];
     currentFrameCommandAllocator->Reset();
@@ -275,9 +279,11 @@ void Renderer::submitComputePass( ComputePass& pass )
 
 void Renderer::submitImGui()
 {
+#ifdef RENDERER_DEBUG
     ComPtr<ID3D12GraphicsCommandList> commandList = getNextGraphicsCommandList();
     recordImgui(commandList);
     commandList->Close();
+#endif
 }
 
 void Renderer::endFrame()
@@ -291,9 +297,11 @@ void Renderer::endFrame()
 
     m_postFrameCommandList->Close();
 
+#ifdef RENDERER_DEBUG
     auto end = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>( end - start );
     m_cpuFrameTime = static_cast<double>( elapsed.count() );
+#endif
 
     m_graphicsCmdQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)m_preFrameCommandList.GetAddressOf());
     for (size_t i = 0; i < submittedRenderPasses.size(); i++)
@@ -320,8 +328,9 @@ void Renderer::endFrame()
             fence->GPUSignal(m_computeCmdQueue);
         }
     }
+#ifdef RENDERER_DEBUG
     m_graphicsCmdQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)m_graphicsCommandLists[m_numGraphicsCommandListsUsed-1].GetAddressOf());
-    m_graphicsCmdQueue->ExecuteCommandLists(1, (ID3D12CommandList* const*)m_postFrameCommandList.GetAddressOf());
+#endif
 
     m_swapChain->Present( 0, 0 );
 
