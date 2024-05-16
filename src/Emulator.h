@@ -21,16 +21,21 @@ public:
 
     struct CartridgeInfo
     {
-        std::string m_name;
-        bool m_isColorGB;
-        bool m_hasSGBFunctions;
-        uint8_t m_type;
-        uint64_t m_romSize;
-        uint64_t m_numRomBanks;
-        uint64_t m_ramSize;
-        uint64_t m_numRamBanks;
+        std::string m_name = "";
+        bool m_isColorGB = false;
+        bool m_hasSGBFunctions = false;
+        uint8_t m_type = 0;
+        uint64_t m_romSize = 0;
+        uint64_t m_numRomBanks = 0;
+        uint64_t m_ramSize = 0;
+        uint64_t m_numRamBanks = 0;
 
         std::string getCartridgeTypeStr() const;
+        bool hasBatteryBackedRam() const;
+        bool hasMBC1() const;
+        bool hasMBC2() const;
+        bool hasMBC3() const;
+        bool hasMBC5() const;
     };
 
     void openRomFile(char const* romFilename);
@@ -50,7 +55,7 @@ private:
 
     std::string m_romFilename;
     std::unique_ptr<uint8_t[]> m_cartridge;
-    size_t m_cartridgeSize;
+    size_t m_cartridgeSize = 0;
     CartridgeInfo m_cartridgeInfo;
 
     std::unique_ptr<Memory> m_memory;

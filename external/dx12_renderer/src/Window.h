@@ -41,6 +41,7 @@ private:
     std::unique_ptr<Renderer> m_renderer;
 
     MSG m_windowMsg;
+    bool m_shouldCloseWindow = false;
 
     using HandleToWindowMap = std::unordered_map< HWND, Window* >;
     static HandleToWindowMap s_handleToWindowMap;

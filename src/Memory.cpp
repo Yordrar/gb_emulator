@@ -2,14 +2,11 @@
 
 #include <Windows.h>
 
-#include <string>
 #include <algorithm>
-#include <format>
 
 Memory::Memory(uint8_t* cartridge, size_t cartridgeSize)
     : m_cartridge(cartridge)
     , m_cartridgeSize(cartridgeSize)
-    , m_currentRomBank(1)
 {
     std::memcpy(m_memory, m_cartridge, std::min(0x7FFF, static_cast<int>(m_cartridgeSize)));
 }
@@ -44,9 +41,18 @@ void Memory::updateRTC(double deltaTimeSeconds)
     }
 }
 
-uint8_t& Memory::read(size_t address)
+MBC3::MBC3(uint8_t* cartridge, size_t cartridgeSize)
+    : Memory(cartridge, cartridgeSize)
+    , m_currentBankingMode(1)
 {
-    //if (address == 0x3cd1) OutputDebugStringA(std::format("Reading {:x}\n", m_memory[address]).c_str());
+}
+
+MBC3::~MBC3()
+{
+}
+
+uint8_t& MBC3::read(size_t address)
+{
     // Reading from ROM bank
     if (address >= 0x4000 && address <= 0x7FFF)
     {
@@ -115,7 +121,7 @@ uint8_t& Memory::read(size_t address)
     return m_memory[address];
 }
 
-void Memory::write(size_t address, uint8_t value)
+void MBC3::write(size_t address, uint8_t value)
 {
     if (address >= 0x0000 && address <= 0x1FFF)
     {
@@ -214,7 +220,7 @@ void Memory::write(size_t address, uint8_t value)
     m_memory[address] = value;
 }
 
-void Memory::saveRamBanksToFile(std::ofstream& file)
+void MBC3::saveRamBanksToFile(std::ofstream& file)
 {
     file.write(reinterpret_cast<char*>(m_ramBank0), 0x2000);
     file.write(reinterpret_cast<char*>(m_ramBank1), 0x2000);
@@ -224,12 +230,124 @@ void Memory::saveRamBanksToFile(std::ofstream& file)
     m_ramBanksDirty = false;
 }
 
-void Memory::loadRamBanksFromFile(std::ifstream& file)
+void MBC3::loadRamBanksFromFile(std::ifstream& file)
 {
     file.read(reinterpret_cast<char*>(m_ramBank0), 0x2000);
     file.read(reinterpret_cast<char*>(m_ramBank1), 0x2000);
     file.read(reinterpret_cast<char*>(m_ramBank2), 0x2000);
     file.read(reinterpret_cast<char*>(m_ramBank3), 0x2000);
+
+    m_ramBanksDirty = false;
+}
+
+MBC5::MBC5(uint8_t* cartridge, size_t cartridgeSize)
+    : Memory(cartridge, cartridgeSize)
+{
+}
+
+MBC5::~MBC5()
+{
+}
+
+uint8_t& MBC5::read(size_t address)
+{// Reading from ROM bank
+    if (address >= 0x4000 && address <= 0x7FFF)
+    {
+        return m_cartridge[(m_currentRomBank * 0x4000) + (address - 0x4000)];
+    }
+
+    // Reading from RAM bank
+    if (address >= 0xA000 && address <= 0xBFFF)
+    {
+        return m_ramBanks[(m_currentRamBank * 0x2000) + (address - 0xA000)];
+    }
+
+    // Reading from Echo RAM
+    if (address >= 0xE000 && address <= 0xFDFF)
+    {
+        address -= 0x2000;
+    }
+
+    return m_memory[address];
+}
+
+void MBC5::write(size_t address, uint8_t value)
+{
+    if (address >= 0x0000 && address <= 0x1FFF)
+    {
+        if ((value & 0x0F) == 0x0A)
+        {
+            // TODO enable RAM
+        }
+        else
+        {
+            // TODO disable RAM
+        }
+        return;
+    }
+
+    // Least significant 8 bits of the ROM bank number
+    if (address >= 0x2000 && address <= 0x2FFF)
+    {
+        uint8_t selectedRomBank = (value & 0xFF);
+        m_currentRomBank = (m_currentRomBank & 0xFF00) | selectedRomBank;
+        return;
+    }
+
+    // 9th bit of the ROM bank number
+    if (address >= 0x3000 && address <= 0x3FFF)
+    {
+        uint8_t selectedRomBank = (value & 1);
+        m_currentRomBank = (m_currentRomBank & 0x00FF) | selectedRomBank;
+        return;
+    }
+
+    // RAM bank number
+    if (address >= 0x4000 && address <= 0x5FFF)
+    {
+        m_currentRamBank = (value & 0x0F);
+        return;
+    }
+
+    // Writing to RAM bank
+    if (address >= 0xA000 && address <= 0xBFFF)
+    {
+        m_ramBanks[(m_currentRamBank * 0x2000) + (address - 0xA000)] = value;
+
+        m_ramBanksDirty = true;
+
+        return;
+    }
+
+    // Writing to Echo RAM
+    if (address >= 0xE000 && address <= 0xFDFF)
+    {
+        address -= 0x2000;
+    }
+
+    // OAM DMA transfer
+    if (address == 0xFF46)
+    {
+        uint16_t sourceAddress = (uint16_t(std::clamp(static_cast<unsigned int>(value), 0u, 0xF1u)) << 8);
+        for (int i = 0; i <= 0x9F; i++)
+        {
+            write(0xFE00 | i, read(sourceAddress | i));
+        }
+    }
+
+    m_memory[address] = value;
+}
+
+void MBC5::saveRamBanksToFile(std::ofstream& file)
+{
+    file.write(reinterpret_cast<char*>(m_ramBanks), 0x20000);
+
+    m_ramBanksDirty = false;
+}
+
+void MBC5::loadRamBanksFromFile(std::ifstream& file)
+{
+    file.read(reinterpret_cast<char*>(m_ramBanks), 0x20000);
 
     m_ramBanksDirty = false;
 }

@@ -1,11 +1,9 @@
 #include "Emulator.h"
 
-#include <iostream>
 #include <fstream>
 #include <filesystem>
 #include <string>
 #include <chrono>
-#include <format>
 #include <cassert>
 
 #include "CPU.h"
@@ -26,18 +24,7 @@ Emulator::Emulator(ResourceHandle frameTexture, uint8_t* frameTextureData)
 
 Emulator::~Emulator()
 {
-    if (m_cartridgeInfo.m_type == 0x03 ||
-        m_cartridgeInfo.m_type == 0x06 || 
-        m_cartridgeInfo.m_type == 0x09 || 
-        m_cartridgeInfo.m_type == 0x0D || 
-        m_cartridgeInfo.m_type == 0x0F || 
-        m_cartridgeInfo.m_type == 0x10 || 
-        m_cartridgeInfo.m_type == 0x13 || 
-        m_cartridgeInfo.m_type == 0x1B || 
-        m_cartridgeInfo.m_type == 0x1E )
-    {
-        saveBatteryBackedRamToFile();
-    }
+    saveBatteryBackedRamToFile();
 }
 
 void Emulator::openRomFile(char const* romFilename)
@@ -71,7 +58,18 @@ void Emulator::openRomFile(char const* romFilename)
 
     extractCartridgeInfo();
 
-    m_memory = std::make_unique<Memory>(m_cartridge.get(), m_cartridgeSize);
+    if (m_cartridgeInfo.hasMBC3())
+    {
+        m_memory = std::make_unique<MBC3>(m_cartridge.get(), m_cartridgeSize);
+    }
+    else if (m_cartridgeInfo.hasMBC5())
+    {
+        m_memory = std::make_unique<MBC5>(m_cartridge.get(), m_cartridgeSize);
+    }
+    else
+    {
+        m_memory = std::make_unique<Memory>(m_cartridge.get(), m_cartridgeSize);
+    }
     m_joypad = std::make_unique<Joypad>(m_memory.get());
     m_sound = std::make_unique<Sound>(m_memory.get());
     m_cpu = std::make_unique<CPU>(m_memory.get(), m_joypad.get());
@@ -124,9 +122,9 @@ void Emulator::processKeyboardInput(WPARAM wParam, LPARAM lParam)
 
 void Emulator::saveBatteryBackedRamToFile()
 {
-    if (!m_cartridge) return;
+    if (!m_cartridge || !m_cartridgeInfo.hasBatteryBackedRam()) return;
 
-    std::string savFilename = m_romFilename.substr(0, m_romFilename.size() - 2) + "sav";
+    std::string savFilename = m_romFilename.substr(0, m_romFilename.rfind(".") + 1) + "sav";
     std::ofstream file(savFilename, std::fstream::out | std::fstream::binary | std::fstream::trunc);
     m_memory->saveRamBanksToFile(file);
 }
@@ -135,7 +133,7 @@ void Emulator::loadSavFileToRam()
 {
     if (!m_cartridge) return;
 
-    std::string savFilename = m_romFilename.substr(0, m_romFilename.size() - 2) + "sav";
+    std::string savFilename = m_romFilename.substr(0, m_romFilename.rfind(".") + 1) + "sav";
 
     if (!std::filesystem::exists(savFilename))
     {
@@ -277,7 +275,13 @@ std::string Emulator::CartridgeInfo::getCartridgeTypeStr() const
     case 0x1E:
         return "ROM+MBC5+RUMBLE+SRAM+BATTERY";
         break;
-    case 0x1F:
+    case 0x20:
+        return "MBC6";
+        break;
+    case 0x22:
+        return "MBC7+SENSOR+RUMBLE+RAM+BATTERY";
+        break;
+    case 0xFC:
         return "Pocket Camera";
         break;
     case 0xFD:
@@ -287,10 +291,56 @@ std::string Emulator::CartridgeInfo::getCartridgeTypeStr() const
         return "Hudson HuC-3";
         break;
     case 0xFF:
-        return "Hudson HuC-1";
+        return "Hudson HuC-1+RAM+BATTERY";
         break;
     default:
         return "Unrecognized cartridge type";
         break;
     }
+}
+
+bool Emulator::CartridgeInfo::hasBatteryBackedRam() const
+{
+    return m_type == 0x03 ||
+        m_type == 0x06 ||
+        m_type == 0x09 ||
+        m_type == 0x0D ||
+        m_type == 0x0F ||
+        m_type == 0x10 ||
+        m_type == 0x13 ||
+        m_type == 0x1B ||
+        m_type == 0x1E ||
+        m_type == 0x22 ||
+        m_type == 0xFF;
+}
+
+bool Emulator::CartridgeInfo::hasMBC1() const
+{
+    return m_type == 0x01 ||
+        m_type == 0x02 ||
+        m_type == 0x03;
+}
+
+bool Emulator::CartridgeInfo::hasMBC2() const
+{
+    return m_type == 0x05 ||
+        m_type == 0x06;
+}
+
+bool Emulator::CartridgeInfo::hasMBC3() const
+{
+    return m_type == 0x10 ||
+        m_type == 0x11 ||
+        m_type == 0x12 ||
+        m_type == 0x13;
+}
+
+bool Emulator::CartridgeInfo::hasMBC5() const
+{
+    return m_type == 0x19 ||
+        m_type == 0x1A ||
+        m_type == 0x1B ||
+        m_type == 0x1C ||
+        m_type == 0x1D ||
+        m_type == 0x1E;
 }

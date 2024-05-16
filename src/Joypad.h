@@ -2,7 +2,6 @@
 
 #include <Windows.h>
 #include <cstdint>
-
 #include <thread>
 
 class Memory;
@@ -15,9 +14,10 @@ public:
 
     bool updateJOYPRegister();
     void processKeyboardInput(WPARAM wParam, LPARAM lParam);
-    void pollControllerInput();
 
 private:
+    void pollControllerInput();
+
     enum InputDeviceType
     {
         Keyboard,

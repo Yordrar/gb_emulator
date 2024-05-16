@@ -1,7 +1,5 @@
 #include "LCD.h"
 
-#include <format>
-
 #include "CPU.h"
 #include "Memory.h"
 

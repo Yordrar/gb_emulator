@@ -97,7 +97,7 @@ bool Window::shouldCloseWindow() const
     {
         TranslateMessage(&m_windowMsg);
         DispatchMessage(&m_windowMsg);
-        return m_windowMsg.message == WM_QUIT;
+        return m_shouldCloseWindow;
     }
     return false;
 }
@@ -180,7 +180,7 @@ LRESULT Window::windowCallback(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
     case WM_SIZE:
         break;
     case WM_DESTROY:
-        PostQuitMessage(0);
+        m_shouldCloseWindow = true;
         break;
     case WM_LBUTTONDOWN:
     case WM_LBUTTONUP:

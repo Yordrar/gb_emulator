@@ -2,7 +2,6 @@
 
 #include <Windows.h>
 #include <Xinput.h>
-#include <format>
 
 #include "Memory.h"
 

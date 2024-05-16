@@ -1,11 +1,13 @@
 #include "CPU.h"
 
 #include <Windows.h>
+#include <cmath>
+
+#ifdef EMULATOR_DEBUG
 #include <string>
 #include <format>
 #include <cassert>
-#include <cstring>
-#include <cmath>
+#endif
 
 #include "Memory.h"
 #include "Joypad.h"
@@ -637,14 +639,18 @@ uint64_t CPU::executeInstruction()
         case 0xFF: setBitInRegister(7, m_registers.A); return 8; break;
         
         default:
+#ifdef EMULATOR_DEBUG
             OutputDebugStringA("Unknown prefixed opcode: ");
             OutputDebugStringA(std::format("{:x}", n).c_str());
             OutputDebugStringA("\n");
             assert(false);
+#endif
             return 0;
             break;
         }
+#ifdef EMULATOR_DEBUG
         assert(false);
+#endif
         return 0;
         break;
     case 0x27:
@@ -2271,10 +2277,12 @@ uint64_t CPU::executeInstruction()
 
         // Unimplemented or not supported opcode
     default:
+#ifdef EMULATOR_DEBUG
         OutputDebugStringA("Unknown opcode: ");
         OutputDebugStringA(std::format("{:x}", opcode).c_str());
         OutputDebugStringA("\n");
         assert(false);
+#endif
         return 0;
         break;
     }
