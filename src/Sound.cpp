@@ -35,8 +35,8 @@ void Sound::update(uint64_t cyclesToEmulate)
     uint8_t NR50 = m_memory->read(0xFF24);
     uint8_t NR51 = m_memory->read(0xFF25);
     uint8_t NR52 = m_memory->read(0xFF26);
-    float leftVolume = ((NR50 & 0x70) >> 4) / 30.0f;
-    float rightVolume = (NR50 & 0x07) / 30.0f;
+    uint8_t leftVolume = ((NR50 & 0x70) >> 4);
+    uint8_t rightVolume = (NR50 & 0x07);
     uint8_t outputCh4ToLeft = (NR51 & 0x80) >> 7;
     uint8_t outputCh3ToLeft = (NR51 & 0x40) >> 6;
     uint8_t outputCh2ToLeft = (NR51 & 0x20) >> 5;
@@ -55,9 +55,13 @@ void Sound::update(uint64_t cyclesToEmulate)
     for (uint64_t i = 0; i < cyclesToEmulate; i++)
     {
         m_sampleClock++;
+
         if ((m_sampleClock % 8192) == 0)
         {
+            m_sampleClock = 0;
+
             m_frameSequencer = (m_frameSequencer + 1) & 7;
+
             if ((m_frameSequencer & 1) == 0)
             {
                 handleLengthClock(m_ch1Enabled, m_ch1LengthEnabled, m_ch1LengthTimer);
@@ -110,8 +114,8 @@ void Sound::update(uint64_t cyclesToEmulate)
                         (sampleCh2 * outputCh2ToRight * m_ch2Enabled) +
                         (sampleCh3 * outputCh3ToRight * m_ch3Enabled) +
                         (sampleCh4 * outputCh4ToRight * m_ch4Enabled) ) / 4.0f;
-                m_audioDataBuffer[m_audioDataBufferSampleCount++] = leftSample * leftVolume;
-                m_audioDataBuffer[m_audioDataBufferSampleCount++] = rightSample * rightVolume;
+                m_audioDataBuffer[m_audioDataBufferSampleCount++] = leftSample * (leftVolume / 30.0f);
+                m_audioDataBuffer[m_audioDataBufferSampleCount++] = rightSample * (rightVolume / 30.0f);
             }
             else
             {
@@ -150,7 +154,7 @@ void Sound::updateChannel1Data()
     m_ch1EnvelopeDirection = (NR12 & 0x08) >> 3;
     m_ch1EnvelopePeriod = (NR12 & 0x07);
     m_ch1Frequency = (uint64_t(NR13) >> 0) | (uint64_t(NR14 & 7) << 8);
-    m_ch1LengthEnabled = (NR14 & 0x4) >> 6;
+    m_ch1LengthEnabled = (NR14 >> 6) & 1;
 
     if ((NR14 & 0x80) != 0 && (m_memory->read(0xFF26) & 0x80))
     {
@@ -165,7 +169,7 @@ void Sound::updateChannel1Data()
         m_ch1CurrentVolume = m_ch1EnvelopeInitial;
         m_ch1ShadowFrequency = m_ch1Frequency;
         m_ch1SweepTimer = m_ch1SweepTime == 0 ? 8 : m_ch1SweepTime;
-        m_ch1SweepEnabled == (m_ch1SweepTime != 0) || (m_ch1SweepShift != 0) ? 1 : 0;
+        m_ch1SweepEnabled = (m_ch1SweepTime != 0) || (m_ch1SweepShift != 0) ? 1 : 0;
         if (m_ch1SweepShift > 0)
         {
             calculateCh1NewFrequencyAndOverflowCheck();
@@ -368,20 +372,25 @@ void Sound::handleSweepClock()
     if (m_ch1SweepTimer > 0)
     {
         m_ch1SweepTimer--;
-        if (m_ch1SweepTimer == 0)
+    }
+
+    if (m_ch1SweepTimer == 0)
+    {
+        m_ch1SweepTimer = m_ch1SweepTime == 0 ? 8 : m_ch1SweepTime;
+        if (m_ch1SweepEnabled && m_ch1SweepTime != 0)
         {
-            m_ch1SweepTimer = m_ch1SweepTime == 0 ? 8 : m_ch1SweepTime;
-            if (m_ch1SweepEnabled && m_ch1SweepTime != 0)
+            uint64_t newFrequency = calculateCh1NewFrequencyAndOverflowCheck();
+
+            if (newFrequency <= 2047 && m_ch1SweepShift > 0)
             {
-                uint64_t newFrequency = calculateCh1NewFrequencyAndOverflowCheck();
+                m_ch1Frequency = newFrequency;
+                m_ch1ShadowFrequency = newFrequency;
 
-                if (newFrequency <= 2047 && m_ch1SweepShift > 0)
-                {
-                    m_ch1Frequency = newFrequency;
-                    m_ch1ShadowFrequency = newFrequency;
+                // Write back the new frequency to NR13 and NR14
+                m_memory->write(0xFF13, m_ch1Frequency & 0xFF);
+                m_memory->write(0xFF14, ((m_ch1Frequency & 0x700) >> 8) | (m_ch1LengthEnabled << 6));
 
-                    calculateCh1NewFrequencyAndOverflowCheck();
-                }
+                calculateCh1NewFrequencyAndOverflowCheck();
             }
         }
     }
