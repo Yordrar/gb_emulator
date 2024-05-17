@@ -127,7 +127,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     }
 
     // TODO implement UI for loading ROMs
-    bool show_window = false;
+    bool show_window = true;
     renderer->registerImguiCallback([&show_window, &renderer, &mainPass, &emulator]()
         {
             if (show_window)
@@ -136,6 +136,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
                 ImGui::Begin("Cartridge Info", &show_window);
                 ImGui::Text("Name: %s", cartInfo.m_name.c_str());
                 ImGui::Text("Is CGB: %s", cartInfo.m_isColorGB ? "yes" : "no");
+                ImGui::Text("Is Non-CGB backwards compatible: %s", cartInfo.m_isNonCGBCompatible || !cartInfo.m_isColorGB ? "yes" : "no");
                 ImGui::Text("Has SGB Functions: %s", cartInfo.m_hasSGBFunctions ? "yes" : "no");
                 ImGui::Text("Type: %s", cartInfo.getCartridgeTypeStr().c_str());
                 if (cartInfo.m_romSize / 1024 >= 1024)

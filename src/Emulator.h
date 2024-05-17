@@ -23,6 +23,7 @@ public:
     {
         std::string m_name = "";
         bool m_isColorGB = false;
+        bool m_isNonCGBCompatible = false;
         bool m_hasSGBFunctions = false;
         uint8_t m_type = 0;
         uint64_t m_romSize = 0;

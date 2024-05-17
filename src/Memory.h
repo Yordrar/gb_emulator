@@ -28,10 +28,10 @@ public:
 
     void updateRTC(double deltaTimeSeconds);
 
-    virtual uint8_t& read(size_t address) { return m_memory[address]; };
+    virtual uint8_t read(size_t address) { return m_memory[address]; };
     virtual void write(size_t address, uint8_t value) { m_memory[address] = value; };
 
-    virtual bool areRamBanksDirty() const { return m_ramBanksDirty; }
+    bool areRamBanksDirty() const { return m_ramBanksDirty; }
     virtual void saveRamBanksToFile(std::ofstream& file) {};
     virtual void loadRamBanksFromFile(std::ifstream& file) {};
 
@@ -52,13 +52,52 @@ protected:
     uint8_t m_rtcUpperDayCounter = 0;
 };
 
+class MBC1 : public Memory
+{
+public:
+    MBC1(uint8_t* cartridge, size_t cartridgeSize);
+    ~MBC1();
+
+    virtual uint8_t read(size_t address) override;
+    virtual void write(size_t address, uint8_t value) override;
+
+    virtual void saveRamBanksToFile(std::ofstream& file) override;
+    virtual void loadRamBanksFromFile(std::ifstream& file) override;
+
+private:
+    bool m_ramEnabled = false;
+
+    uint8_t m_currentBankingMode = 0;
+
+    uint16_t m_currentRomBank = 1;
+
+    uint16_t m_currentRamBank = 0;
+    uint8_t m_ramBanks[0x8000] = {};
+};
+
+class MBC2 : public Memory
+{
+public:
+    MBC2(uint8_t* cartridge, size_t cartridgeSize);
+    ~MBC2();
+
+    virtual uint8_t read(size_t address) override;
+    virtual void write(size_t address, uint8_t value) override;
+
+    virtual void saveRamBanksToFile(std::ofstream& file) override;
+    virtual void loadRamBanksFromFile(std::ifstream& file) override;
+
+private:
+    uint16_t m_currentRomBank = 1;
+};
+
 class MBC3 : public Memory
 {
 public:
     MBC3(uint8_t* cartridge, size_t cartridgeSize);
     ~MBC3();
 
-    virtual uint8_t& read(size_t address) override;
+    virtual uint8_t read(size_t address) override;
     virtual void write(size_t address, uint8_t value) override;
 
     virtual void saveRamBanksToFile(std::ofstream& file) override;
@@ -82,7 +121,7 @@ public:
     MBC5(uint8_t* cartridge, size_t cartridgeSize);
     ~MBC5();
 
-    virtual uint8_t& read(size_t address) override;
+    virtual uint8_t read(size_t address) override;
     virtual void write(size_t address, uint8_t value) override;
 
     virtual void saveRamBanksToFile(std::ofstream& file) override;

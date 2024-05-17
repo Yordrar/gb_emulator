@@ -58,7 +58,15 @@ void Emulator::openRomFile(char const* romFilename)
 
     extractCartridgeInfo();
 
-    if (m_cartridgeInfo.hasMBC3())
+    if (m_cartridgeInfo.hasMBC1())
+    {
+        m_memory = std::make_unique<MBC1>(m_cartridge.get(), m_cartridgeSize);
+    }
+    else if (m_cartridgeInfo.hasMBC2())
+    {
+        m_memory = std::make_unique<MBC2>(m_cartridge.get(), m_cartridgeSize);
+    }
+    else if (m_cartridgeInfo.hasMBC3())
     {
         m_memory = std::make_unique<MBC3>(m_cartridge.get(), m_cartridgeSize);
     }
@@ -194,8 +202,9 @@ void Emulator::extractCartridgeInfo()
 
     m_cartridgeInfo =
     {
-        .m_name = std::string(reinterpret_cast<char*>(&m_cartridge[0x134])),
-        .m_isColorGB = m_cartridge[0x143] == 0x80,
+        .m_name = std::string(reinterpret_cast<char*>(&m_cartridge[0x134]), 16),
+        .m_isColorGB = m_cartridge[0x143] == 0x80 || m_cartridge[0x143] == 0xC0,
+        .m_isNonCGBCompatible = m_cartridge[0x143] == 0x80,
         .m_hasSGBFunctions = m_cartridge[0x146] == 0x03,
         .m_type = m_cartridge[0x147],
         .m_romSize = numRomBanks * 16 * 1024,

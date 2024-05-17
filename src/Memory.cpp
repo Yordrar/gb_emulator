@@ -41,6 +41,231 @@ void Memory::updateRTC(double deltaTimeSeconds)
     }
 }
 
+MBC1::MBC1(uint8_t* cartridge, size_t cartridgeSize)
+    : Memory(cartridge, cartridgeSize)
+{
+}
+
+MBC1::~MBC1()
+{
+}
+
+uint8_t MBC1::read(size_t address)
+{
+    // Reading from ROM bank 0
+    if (address >= 0x0000 && address <= 0x3FFF)
+    {
+        if (m_currentBankingMode == 1)
+        {
+            return m_cartridge[(m_currentRomBank * 0x4000) + address];
+        }
+    }
+
+    // Reading from ROM bank #
+    if (address >= 0x4000 && address <= 0x7FFF)
+    {
+        if (m_currentBankingMode == 0 && (m_currentRomBank & 0x1F) == 0)
+        {
+            return m_cartridge[((m_currentRomBank + 1) * 0x4000) + (address - 0x4000)];
+        }
+
+        return m_cartridge[(m_currentRomBank * 0x4000) + (address - 0x4000)];
+    }
+
+    // Reading from RAM bank
+    if (address >= 0xA000 && address <= 0xBFFF)
+    {
+        if (m_ramEnabled)
+        {
+            return m_ramBanks[(m_currentRamBank * 0x2000) + (address - 0xA000)];
+        }
+        else
+        {
+            return 0xFF;
+        }
+    }
+
+    // Reading from Echo RAM
+    if (address >= 0xE000 && address <= 0xFDFF)
+    {
+        address -= 0x2000;
+    }
+
+    return m_memory[address];
+}
+
+void MBC1::write(size_t address, uint8_t value)
+{
+    if (address >= 0x0000 && address <= 0x1FFF)
+    {
+        m_ramEnabled = ((value & 0x0F) == 0x0A);
+        return;
+    }
+
+    // ROM bank number
+    if (address >= 0x2000 && address <= 0x3FFF)
+    {
+        uint8_t selectedRomBank = (value & 0x1F);
+        m_currentRomBank = (m_currentRomBank & 0xE0) | selectedRomBank;
+        return;
+    }
+
+    // RAM bank number or upper bits of ROM bank number
+    if (address >= 0x4000 && address <= 0x5FFF)
+    {
+        m_currentRamBank = (value & 0x03);
+        m_currentRomBank = (m_currentRomBank & 0x1F) | uint16_t(value & 0x03) << 5;
+        return;
+    }
+
+    // Banking mode
+    if (address >= 0x6000 && address <= 0x7FFF)
+    {
+        m_currentBankingMode = (value & 1);
+        return;
+    }
+
+    // Writing to RAM bank
+    if (address >= 0xA000 && address <= 0xBFFF && m_ramEnabled)
+    {
+        m_ramBanks[(m_currentRamBank * 0x2000) + (address - 0xA000)] = value;
+
+        m_ramBanksDirty = true;
+
+        return;
+    }
+
+    // Writing to Echo RAM
+    if (address >= 0xE000 && address <= 0xFDFF)
+    {
+        address -= 0x2000;
+    }
+
+    // OAM DMA transfer
+    if (address == 0xFF46)
+    {
+        uint16_t sourceAddress = (uint16_t(std::clamp(static_cast<unsigned int>(value), 0u, 0xF1u)) << 8);
+        for (int i = 0; i <= 0x9F; i++)
+        {
+            write(0xFE00 | i, read(sourceAddress | i));
+        }
+    }
+
+    m_memory[address] = value;
+}
+
+void MBC1::saveRamBanksToFile(std::ofstream& file)
+{
+    file.write(reinterpret_cast<char*>(m_ramBanks), 0x8000);
+
+    m_ramBanksDirty = false;
+}
+
+void MBC1::loadRamBanksFromFile(std::ifstream& file)
+{
+    file.read(reinterpret_cast<char*>(m_ramBanks), 0x8000);
+
+    m_ramBanksDirty = false;
+}
+
+MBC2::MBC2(uint8_t* cartridge, size_t cartridgeSize)
+    : Memory(cartridge, cartridgeSize)
+{
+}
+
+MBC2::~MBC2()
+{
+}
+
+uint8_t MBC2::read(size_t address)
+{
+    // Reading from ROM bank #
+    if (address >= 0x4000 && address <= 0x7FFF)
+    {
+        return m_cartridge[(m_currentRomBank * 0x4000) + (address - 0x4000)];
+    }
+
+    // Reading from RAM bank
+    if (address >= 0xA000 && address <= 0xBFFF)
+    {
+        return m_memory[0xA000 + (address & 0x1FF)];
+    }
+
+    // Reading from Echo RAM
+    if (address >= 0xE000 && address <= 0xFDFF)
+    {
+        address -= 0x2000;
+    }
+
+    return m_memory[address];
+}
+
+void MBC2::write(size_t address, uint8_t value)
+{
+    // RAM enable and ROM bank number
+    if (address >= 0x0000 && address <= 0x3FFF)
+    {
+        if ((value & 0x0F) == 0x0A)
+        {
+            // TODO enable RAM
+        }
+        else
+        {
+            // TODO disable RAM
+        }
+
+        uint8_t selectedRomBank = (value & 0x0F);
+        if (selectedRomBank == 0)
+        {
+            selectedRomBank++;
+        }
+        m_currentRomBank = (m_currentRomBank & 0xF0) | selectedRomBank;
+        return;
+    }
+
+    // Writing to RAM bank
+    if (address >= 0xA000 && address <= 0xBFFF)
+    {
+        m_memory[0xA000 + (address & 0x1FF)] = (value & 0x0F);
+
+        m_ramBanksDirty = true;
+
+        return;
+    }
+
+    // Writing to Echo RAM
+    if (address >= 0xE000 && address <= 0xFDFF)
+    {
+        address -= 0x2000;
+    }
+
+    // OAM DMA transfer
+    if (address == 0xFF46)
+    {
+        uint16_t sourceAddress = (uint16_t(std::clamp(static_cast<unsigned int>(value), 0u, 0xF1u)) << 8);
+        for (int i = 0; i <= 0x9F; i++)
+        {
+            write(0xFE00 | i, read(sourceAddress | i));
+        }
+    }
+
+    m_memory[address] = (value & 0x0F);
+}
+
+void MBC2::saveRamBanksToFile(std::ofstream& file)
+{
+    file.write(reinterpret_cast<char*>(&m_memory[0xA000]), 0x200);
+
+    m_ramBanksDirty = false;
+}
+
+void MBC2::loadRamBanksFromFile(std::ifstream& file)
+{
+    file.read(reinterpret_cast<char*>(&m_memory[0xA000]), 0x200);
+
+    m_ramBanksDirty = false;
+}
+
 MBC3::MBC3(uint8_t* cartridge, size_t cartridgeSize)
     : Memory(cartridge, cartridgeSize)
     , m_currentBankingMode(1)
@@ -51,7 +276,7 @@ MBC3::~MBC3()
 {
 }
 
-uint8_t& MBC3::read(size_t address)
+uint8_t MBC3::read(size_t address)
 {
     // Reading from ROM bank
     if (address >= 0x4000 && address <= 0x7FFF)
@@ -136,6 +361,7 @@ void MBC3::write(size_t address, uint8_t value)
         return;
     }
 
+    // ROM bank number
     if (address >= 0x2000 && address <= 0x3FFF)
     {
         uint8_t selectedRomBank = (value & 0x7F);
@@ -147,6 +373,7 @@ void MBC3::write(size_t address, uint8_t value)
         return;
     }
 
+    // RAM bank number
     if (address >= 0x4000 && address <= 0x5FFF)
     {
         m_currentRamBank = (value & 0x0F);
@@ -249,8 +476,9 @@ MBC5::~MBC5()
 {
 }
 
-uint8_t& MBC5::read(size_t address)
-{// Reading from ROM bank
+uint8_t MBC5::read(size_t address)
+{
+    // Reading from ROM bank
     if (address >= 0x4000 && address <= 0x7FFF)
     {
         return m_cartridge[(m_currentRomBank * 0x4000) + (address - 0x4000)];

@@ -223,7 +223,9 @@ uint64_t CPU::executeInstruction()
             return 8;
             break;
         case 0x06:
-            rotateRegisterLeft(m_memory->read(m_registers.HL));
+            n = m_memory->read(m_registers.HL);
+            rotateRegisterLeft(n);
+            m_memory->write(m_registers.HL, n);
             return 16;
             break;
         case 0x17:
@@ -255,7 +257,9 @@ uint64_t CPU::executeInstruction()
             return 8;
             break;
         case 0x16:
-            rotateRegisterLeftThroughCarry(m_memory->read(m_registers.HL));
+            n = m_memory->read(m_registers.HL);
+            rotateRegisterLeftThroughCarry(n);
+            m_memory->write(m_registers.HL, n);
             return 16;
             break;
         case 0x0F:
@@ -287,7 +291,9 @@ uint64_t CPU::executeInstruction()
             return 8;
             break;
         case 0x0E:
-            rotateRegisterRight(m_memory->read(m_registers.HL));
+            n = m_memory->read(m_registers.HL);
+            rotateRegisterRight(n);
+            m_memory->write(m_registers.HL, n);
             return 16;
             break;
         case 0x1F:
@@ -319,7 +325,9 @@ uint64_t CPU::executeInstruction()
             return 8;
             break;
         case 0x1E:
-            rotateRegisterRightThroughCarry(m_memory->read(m_registers.HL));
+            n = m_memory->read(m_registers.HL);
+            rotateRegisterRightThroughCarry(n);
+            m_memory->write(m_registers.HL, n);
             return 16;
             break;
 
@@ -353,7 +361,9 @@ uint64_t CPU::executeInstruction()
             return 8;
             break;
         case 0x26:
-            shiftRegisterLeftArithmetically(m_memory->read(m_registers.HL));
+            n = m_memory->read(m_registers.HL);
+            shiftRegisterLeftArithmetically(n);
+            m_memory->write(m_registers.HL, n);
             return 16;
             break;
         case 0x2F:
@@ -385,7 +395,9 @@ uint64_t CPU::executeInstruction()
             return 8;
             break;
         case 0x2E:
-            shiftRegisterRightArithmetically(m_memory->read(m_registers.HL));
+            n = m_memory->read(m_registers.HL);
+            shiftRegisterRightArithmetically(n);
+            m_memory->write(m_registers.HL, n);
             return 16;
             break;
         case 0x3F:
@@ -417,7 +429,9 @@ uint64_t CPU::executeInstruction()
             return 8;
             break;
         case 0x3E:
-            shiftRegisterRightLogically(m_memory->read(m_registers.HL));
+            n = m_memory->read(m_registers.HL);
+            shiftRegisterRightLogically(n);
+            m_memory->write(m_registers.HL, n);
             return 16;
             break;
 
@@ -428,7 +442,11 @@ uint64_t CPU::executeInstruction()
         case 0x43: testBitInRegister(0, m_registers.E); return 8; break;
         case 0x44: testBitInRegister(0, m_registers.H); return 8; break;
         case 0x45: testBitInRegister(0, m_registers.L); return 8; break;
-        case 0x46: testBitInRegister(0, m_memory->read(m_registers.HL)); return 12; break;
+        case 0x46:
+            n = m_memory->read(m_registers.HL);
+            testBitInRegister(0, n);
+            return 12;
+            break;
         case 0x47: testBitInRegister(0, m_registers.A); return 8; break;
 
         case 0x48: testBitInRegister(1, m_registers.B); return 8; break;
@@ -437,7 +455,11 @@ uint64_t CPU::executeInstruction()
         case 0x4B: testBitInRegister(1, m_registers.E); return 8; break;
         case 0x4C: testBitInRegister(1, m_registers.H); return 8; break;
         case 0x4D: testBitInRegister(1, m_registers.L); return 8; break;
-        case 0x4E: testBitInRegister(1, m_memory->read(m_registers.HL)); return 12; break;
+        case 0x4E:
+            n = m_memory->read(m_registers.HL);
+            testBitInRegister(1, n);
+            return 12;
+            break;
         case 0x4F: testBitInRegister(1, m_registers.A); return 8; break;
 
         case 0x50: testBitInRegister(2, m_registers.B); return 8; break;
@@ -446,7 +468,11 @@ uint64_t CPU::executeInstruction()
         case 0x53: testBitInRegister(2, m_registers.E); return 8; break;
         case 0x54: testBitInRegister(2, m_registers.H); return 8; break;
         case 0x55: testBitInRegister(2, m_registers.L); return 8; break;
-        case 0x56: testBitInRegister(2, m_memory->read(m_registers.HL)); return 12; break;
+        case 0x56:
+            n = m_memory->read(m_registers.HL);
+            testBitInRegister(2, n);
+            return 12;
+            break;
         case 0x57: testBitInRegister(2, m_registers.A); return 8; break;
 
         case 0x58: testBitInRegister(3, m_registers.B); return 8; break;
@@ -455,7 +481,11 @@ uint64_t CPU::executeInstruction()
         case 0x5B: testBitInRegister(3, m_registers.E); return 8; break;
         case 0x5C: testBitInRegister(3, m_registers.H); return 8; break;
         case 0x5D: testBitInRegister(3, m_registers.L); return 8; break;
-        case 0x5E: testBitInRegister(3, m_memory->read(m_registers.HL)); return 12; break;
+        case 0x5E:
+            n = m_memory->read(m_registers.HL);
+            testBitInRegister(3, n);
+            return 12;
+            break;
         case 0x5F: testBitInRegister(3, m_registers.A); return 8; break;
 
         case 0x60: testBitInRegister(4, m_registers.B); return 8; break;
@@ -464,7 +494,11 @@ uint64_t CPU::executeInstruction()
         case 0x63: testBitInRegister(4, m_registers.E); return 8; break;
         case 0x64: testBitInRegister(4, m_registers.H); return 8; break;
         case 0x65: testBitInRegister(4, m_registers.L); return 8; break;
-        case 0x66: testBitInRegister(4, m_memory->read(m_registers.HL)); return 12; break;
+        case 0x66:
+            n = m_memory->read(m_registers.HL);
+            testBitInRegister(4, n);
+            return 12;
+            break;
         case 0x67: testBitInRegister(4, m_registers.A); return 8; break;
 
         case 0x68: testBitInRegister(5, m_registers.B); return 8; break;
@@ -473,7 +507,11 @@ uint64_t CPU::executeInstruction()
         case 0x6B: testBitInRegister(5, m_registers.E); return 8; break;
         case 0x6C: testBitInRegister(5, m_registers.H); return 8; break;
         case 0x6D: testBitInRegister(5, m_registers.L); return 8; break;
-        case 0x6E: testBitInRegister(5, m_memory->read(m_registers.HL)); return 12; break;
+        case 0x6E:
+            n = m_memory->read(m_registers.HL);
+            testBitInRegister(5, n);
+            return 12;
+            break;
         case 0x6F: testBitInRegister(5, m_registers.A); return 8; break;
 
         case 0x70: testBitInRegister(6, m_registers.B); return 8; break;
@@ -482,7 +520,11 @@ uint64_t CPU::executeInstruction()
         case 0x73: testBitInRegister(6, m_registers.E); return 8; break;
         case 0x74: testBitInRegister(6, m_registers.H); return 8; break;
         case 0x75: testBitInRegister(6, m_registers.L); return 8; break;
-        case 0x76: testBitInRegister(6, m_memory->read(m_registers.HL)); return 12; break;
+        case 0x76:
+            n = m_memory->read(m_registers.HL);
+            testBitInRegister(6, n);
+            return 12;
+            break;
         case 0x77: testBitInRegister(6, m_registers.A); return 8; break;
 
         case 0x78: testBitInRegister(7, m_registers.B); return 8; break;
@@ -491,7 +533,11 @@ uint64_t CPU::executeInstruction()
         case 0x7B: testBitInRegister(7, m_registers.E); return 8; break;
         case 0x7C: testBitInRegister(7, m_registers.H); return 8; break;
         case 0x7D: testBitInRegister(7, m_registers.L); return 8; break;
-        case 0x7E: testBitInRegister(7, m_memory->read(m_registers.HL)); return 12; break;
+        case 0x7E:
+            n = m_memory->read(m_registers.HL);
+            testBitInRegister(7, n);
+            return 12;
+            break;
         case 0x7F: testBitInRegister(7, m_registers.A); return 8; break;
 
         case 0x80: resetBitInRegister(0, m_registers.B); return 8; break;
@@ -500,7 +546,12 @@ uint64_t CPU::executeInstruction()
         case 0x83: resetBitInRegister(0, m_registers.E); return 8; break;
         case 0x84: resetBitInRegister(0, m_registers.H); return 8; break;
         case 0x85: resetBitInRegister(0, m_registers.L); return 8; break;
-        case 0x86: resetBitInRegister(0, m_memory->read(m_registers.HL)); return 16; break;
+        case 0x86:
+            n = m_memory->read(m_registers.HL);
+            resetBitInRegister(0, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0x87: resetBitInRegister(0, m_registers.A); return 8; break;
 
         case 0x88: resetBitInRegister(1, m_registers.B); return 8; break;
@@ -509,7 +560,12 @@ uint64_t CPU::executeInstruction()
         case 0x8B: resetBitInRegister(1, m_registers.E); return 8; break;
         case 0x8C: resetBitInRegister(1, m_registers.H); return 8; break;
         case 0x8D: resetBitInRegister(1, m_registers.L); return 8; break;
-        case 0x8E: resetBitInRegister(1, m_memory->read(m_registers.HL)); return 16; break;
+        case 0x8E:
+            n = m_memory->read(m_registers.HL);
+            resetBitInRegister(1, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0x8F: resetBitInRegister(1, m_registers.A); return 8; break;
 
         case 0x90: resetBitInRegister(2, m_registers.B); return 8; break;
@@ -518,7 +574,12 @@ uint64_t CPU::executeInstruction()
         case 0x93: resetBitInRegister(2, m_registers.E); return 8; break;
         case 0x94: resetBitInRegister(2, m_registers.H); return 8; break;
         case 0x95: resetBitInRegister(2, m_registers.L); return 8; break;
-        case 0x96: resetBitInRegister(2, m_memory->read(m_registers.HL)); return 16; break;
+        case 0x96:
+            n = m_memory->read(m_registers.HL);
+            resetBitInRegister(2, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0x97: resetBitInRegister(2, m_registers.A); return 8; break;
 
         case 0x98: resetBitInRegister(3, m_registers.B); return 8; break;
@@ -527,7 +588,12 @@ uint64_t CPU::executeInstruction()
         case 0x9B: resetBitInRegister(3, m_registers.E); return 8; break;
         case 0x9C: resetBitInRegister(3, m_registers.H); return 8; break;
         case 0x9D: resetBitInRegister(3, m_registers.L); return 8; break;
-        case 0x9E: resetBitInRegister(3, m_memory->read(m_registers.HL)); return 16; break;
+        case 0x9E:
+            n = m_memory->read(m_registers.HL);
+            resetBitInRegister(3, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0x9F: resetBitInRegister(3, m_registers.A); return 8; break;
 
         case 0xA0: resetBitInRegister(4, m_registers.B); return 8; break;
@@ -536,7 +602,12 @@ uint64_t CPU::executeInstruction()
         case 0xA3: resetBitInRegister(4, m_registers.E); return 8; break;
         case 0xA4: resetBitInRegister(4, m_registers.H); return 8; break;
         case 0xA5: resetBitInRegister(4, m_registers.L); return 8; break;
-        case 0xA6: resetBitInRegister(4, m_memory->read(m_registers.HL)); return 16; break;
+        case 0xA6:
+            n = m_memory->read(m_registers.HL);
+            resetBitInRegister(4, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0xA7: resetBitInRegister(4, m_registers.A); return 8; break;
 
         case 0xA8: resetBitInRegister(5, m_registers.B); return 8; break;
@@ -545,7 +616,12 @@ uint64_t CPU::executeInstruction()
         case 0xAB: resetBitInRegister(5, m_registers.E); return 8; break;
         case 0xAC: resetBitInRegister(5, m_registers.H); return 8; break;
         case 0xAD: resetBitInRegister(5, m_registers.L); return 8; break;
-        case 0xAE: resetBitInRegister(5, m_memory->read(m_registers.HL)); return 16; break;
+        case 0xAE:
+            n = m_memory->read(m_registers.HL);
+            resetBitInRegister(5, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0xAF: resetBitInRegister(5, m_registers.A); return 8; break;
 
         case 0xB0: resetBitInRegister(6, m_registers.B); return 8; break;
@@ -554,7 +630,12 @@ uint64_t CPU::executeInstruction()
         case 0xB3: resetBitInRegister(6, m_registers.E); return 8; break;
         case 0xB4: resetBitInRegister(6, m_registers.H); return 8; break;
         case 0xB5: resetBitInRegister(6, m_registers.L); return 8; break;
-        case 0xB6: resetBitInRegister(6, m_memory->read(m_registers.HL)); return 16; break;
+        case 0xB6:
+            n = m_memory->read(m_registers.HL);
+            resetBitInRegister(6, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0xB7: resetBitInRegister(6, m_registers.A); return 8; break;
 
         case 0xB8: resetBitInRegister(7, m_registers.B); return 8; break;
@@ -563,7 +644,12 @@ uint64_t CPU::executeInstruction()
         case 0xBB: resetBitInRegister(7, m_registers.E); return 8; break;
         case 0xBC: resetBitInRegister(7, m_registers.H); return 8; break;
         case 0xBD: resetBitInRegister(7, m_registers.L); return 8; break;
-        case 0xBE: resetBitInRegister(7, m_memory->read(m_registers.HL)); return 16; break;
+        case 0xBE:
+            n = m_memory->read(m_registers.HL);
+            resetBitInRegister(7, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0xBF: resetBitInRegister(7, m_registers.A); return 8; break;
 
         case 0xC0: setBitInRegister(0, m_registers.B); return 8; break;
@@ -572,7 +658,12 @@ uint64_t CPU::executeInstruction()
         case 0xC3: setBitInRegister(0, m_registers.E); return 8; break;
         case 0xC4: setBitInRegister(0, m_registers.H); return 8; break;
         case 0xC5: setBitInRegister(0, m_registers.L); return 8; break;
-        case 0xC6: setBitInRegister(0, m_memory->read(m_registers.HL)); return 16; break;
+        case 0xC6:
+            n = m_memory->read(m_registers.HL);
+            setBitInRegister(0, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0xC7: setBitInRegister(0, m_registers.A); return 8; break;
 
         case 0xC8: setBitInRegister(1, m_registers.B); return 8; break;
@@ -581,7 +672,12 @@ uint64_t CPU::executeInstruction()
         case 0xCB: setBitInRegister(1, m_registers.E); return 8; break;
         case 0xCC: setBitInRegister(1, m_registers.H); return 8; break;
         case 0xCD: setBitInRegister(1, m_registers.L); return 8; break;
-        case 0xCE: setBitInRegister(1, m_memory->read(m_registers.HL)); return 16; break;
+        case 0xCE:
+            n = m_memory->read(m_registers.HL);
+            setBitInRegister(1, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0xCF: setBitInRegister(1, m_registers.A); return 8; break;
 
         case 0xD0: setBitInRegister(2, m_registers.B); return 8; break;
@@ -590,7 +686,12 @@ uint64_t CPU::executeInstruction()
         case 0xD3: setBitInRegister(2, m_registers.E); return 8; break;
         case 0xD4: setBitInRegister(2, m_registers.H); return 8; break;
         case 0xD5: setBitInRegister(2, m_registers.L); return 8; break;
-        case 0xD6: setBitInRegister(2, m_memory->read(m_registers.HL)); return 16; break;
+        case 0xD6:
+            n = m_memory->read(m_registers.HL);
+            setBitInRegister(2, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0xD7: setBitInRegister(2, m_registers.A); return 8; break;
 
         case 0xD8: setBitInRegister(3, m_registers.B); return 8; break;
@@ -599,7 +700,12 @@ uint64_t CPU::executeInstruction()
         case 0xDB: setBitInRegister(3, m_registers.E); return 8; break;
         case 0xDC: setBitInRegister(3, m_registers.H); return 8; break;
         case 0xDD: setBitInRegister(3, m_registers.L); return 8; break;
-        case 0xDE: setBitInRegister(3, m_memory->read(m_registers.HL)); return 16; break;
+        case 0xDE:
+            n = m_memory->read(m_registers.HL);
+            setBitInRegister(3, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0xDF: setBitInRegister(3, m_registers.A); return 8; break;
 
         case 0xE0: setBitInRegister(4, m_registers.B); return 8; break;
@@ -608,7 +714,12 @@ uint64_t CPU::executeInstruction()
         case 0xE3: setBitInRegister(4, m_registers.E); return 8; break;
         case 0xE4: setBitInRegister(4, m_registers.H); return 8; break;
         case 0xE5: setBitInRegister(4, m_registers.L); return 8; break;
-        case 0xE6: setBitInRegister(4, m_memory->read(m_registers.HL)); return 16; break;
+        case 0xE6:
+            n = m_memory->read(m_registers.HL);
+            setBitInRegister(4, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0xE7: setBitInRegister(4, m_registers.A); return 8; break;
 
         case 0xE8: setBitInRegister(5, m_registers.B); return 8; break;
@@ -617,7 +728,12 @@ uint64_t CPU::executeInstruction()
         case 0xEB: setBitInRegister(5, m_registers.E); return 8; break;
         case 0xEC: setBitInRegister(5, m_registers.H); return 8; break;
         case 0xED: setBitInRegister(5, m_registers.L); return 8; break;
-        case 0xEE: setBitInRegister(5, m_memory->read(m_registers.HL)); return 16; break;
+        case 0xEE:
+            n = m_memory->read(m_registers.HL);
+            setBitInRegister(5, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0xEF: setBitInRegister(5, m_registers.A); return 8; break;
 
         case 0xF0: setBitInRegister(6, m_registers.B); return 8; break;
@@ -626,7 +742,12 @@ uint64_t CPU::executeInstruction()
         case 0xF3: setBitInRegister(6, m_registers.E); return 8; break;
         case 0xF4: setBitInRegister(6, m_registers.H); return 8; break;
         case 0xF5: setBitInRegister(6, m_registers.L); return 8; break;
-        case 0xF6: setBitInRegister(6, m_memory->read(m_registers.HL)); return 16; break;
+        case 0xF6:
+            n = m_memory->read(m_registers.HL);
+            setBitInRegister(6, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0xF7: setBitInRegister(6, m_registers.A); return 8; break;
 
         case 0xF8: setBitInRegister(7, m_registers.B); return 8; break;
@@ -635,9 +756,14 @@ uint64_t CPU::executeInstruction()
         case 0xFB: setBitInRegister(7, m_registers.E); return 8; break;
         case 0xFC: setBitInRegister(7, m_registers.H); return 8; break;
         case 0xFD: setBitInRegister(7, m_registers.L); return 8; break;
-        case 0xFE: setBitInRegister(7, m_memory->read(m_registers.HL)); return 16; break;
+        case 0xFE:
+            n = m_memory->read(m_registers.HL);
+            setBitInRegister(7, n);
+            m_memory->write(m_registers.HL, n);
+            return 16;
+            break;
         case 0xFF: setBitInRegister(7, m_registers.A); return 8; break;
-        
+
         default:
 #ifdef EMULATOR_DEBUG
             OutputDebugStringA("Unknown prefixed opcode: ");
@@ -654,36 +780,36 @@ uint64_t CPU::executeInstruction()
         return 0;
         break;
     case 0x27:
-        {
-            uint8_t subtractFlag = (m_registers.F & 0b01000000) >> 5;
-            uint8_t halfCarryFlag = (m_registers.F & 0b00100000) >> 5;
-            uint8_t carryFlag = (m_registers.F & 0b00010000) >> 4;
-            
-            uint8_t newFlag = (m_registers.F & 0b01000000);
+    {
+        uint8_t subtractFlag = (m_registers.F & 0b01000000) >> 5;
+        uint8_t halfCarryFlag = (m_registers.F & 0b00100000) >> 5;
+        uint8_t carryFlag = (m_registers.F & 0b00010000) >> 4;
 
-            uint8_t offset = 0;
+        uint8_t newFlag = (m_registers.F & 0b01000000);
 
-            if ((subtractFlag == 0 && (m_registers.A & 0xF) > 0x09) || halfCarryFlag == 1) {
-                offset |= 0x06;
-            }
+        uint8_t offset = 0;
 
-            if ((subtractFlag == 0 && m_registers.A > 0x99) || carryFlag == 1) {
-                offset |= 0x60;
-                newFlag |= (1 << 4);
-            }
-
-
-            if (subtractFlag == 0) {
-                m_registers.A += offset;
-            }
-            else {
-                m_registers.A -= offset;
-            }
-            newFlag |= (uint8_t(m_registers.A == 0) << 7);
-            m_registers.F = newFlag;
-            return 4;
+        if ((subtractFlag == 0 && (m_registers.A & 0xF) > 0x09) || halfCarryFlag == 1) {
+            offset |= 0x06;
         }
-        break;
+
+        if ((subtractFlag == 0 && m_registers.A > 0x99) || carryFlag == 1) {
+            offset |= 0x60;
+            newFlag |= (1 << 4);
+        }
+
+
+        if (subtractFlag == 0) {
+            m_registers.A += offset;
+        }
+        else {
+            m_registers.A -= offset;
+        }
+        newFlag |= (uint8_t(m_registers.A == 0) << 7);
+        m_registers.F = newFlag;
+        return 4;
+    }
+    break;
     case 0x2F:
         m_registers.A = ~m_registers.A;
         m_registers.F |= 0b01100000;
@@ -1080,7 +1206,7 @@ uint64_t CPU::executeInstruction()
         return 12;
         break;
 
-    // 16-bit load operations
+        // 16-bit load operations
     case 0x01:
         m_registers.BC = (m_memory->read(m_registers.PC++) >> 0) | ((uint16_t)(m_memory->read(m_registers.PC++)) << 8);
         return 12;
@@ -1108,11 +1234,11 @@ uint64_t CPU::executeInstruction()
         m_registers.HL = m_registers.SP + offset;
         return 12;
     }
-        break;
+    break;
     case 0x08:
         address = (m_memory->read(m_registers.PC++) >> 0) | ((uint16_t)(m_memory->read(m_registers.PC++)) << 8);
         m_memory->write(address, m_registers.SP & 0xFF);
-        m_memory->write(address+1, m_registers.SP >> 8);
+        m_memory->write(address + 1, m_registers.SP >> 8);
         return 20;
         break;
     case 0xF5:
@@ -1157,7 +1283,7 @@ uint64_t CPU::executeInstruction()
         return 12;
         break;
 
-    // 8-bit arithmetic operations
+        // 8-bit arithmetic operations
     case 0x87:
         m_registers.F = getCarryFlagsFor8BitAddition(m_registers.A, m_registers.A);
         m_registers.A += m_registers.A;
@@ -1961,7 +2087,7 @@ uint64_t CPU::executeInstruction()
         m_registers.SP += offset;
         return 16;
     }
-        break;
+    break;
     case 0x03:
         m_registers.BC++;
         return 8;
@@ -2436,15 +2562,15 @@ uint8_t CPU::getCarryFlagsFor8BitDecrement(uint8_t reg)
 uint8_t CPU::getCarryFlagsFor16BitAddition(uint16_t op1, uint16_t op2)
 {
     uint8_t newFlag = 0;
-    if ( op2 > 0xFFFF - op1)
+    if (op2 > 0xFFFF - op1)
     {
         newFlag |= 0b00010000;
     }
-    if ( (op2 & 0xFFF) > (0xFFF - (op1 & 0xFFF)))
+    if ((op2 & 0xFFF) > (0xFFF - (op1 & 0xFFF)))
     {
         newFlag |= 0b00100000;
     }
-    newFlag |= (m_registers.F&0b10001111);
+    newFlag |= (m_registers.F & 0b10001111);
     return newFlag;
 }
 
