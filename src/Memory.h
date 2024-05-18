@@ -28,8 +28,8 @@ public:
 
     void updateRTC(double deltaTimeSeconds);
 
-    virtual uint8_t read(size_t address) { return m_memory[address]; };
-    virtual void write(size_t address, uint8_t value) { m_memory[address] = value; };
+    virtual uint8_t read(size_t address);
+    virtual void write(size_t address, uint8_t value);
 
     bool areRamBanksDirty() const { return m_ramBanksDirty; }
     virtual void saveRamBanksToFile(std::ofstream& file) {};
@@ -40,6 +40,8 @@ protected:
     size_t m_cartridgeSize;
 
     uint8_t m_memory[0x10000] = {};
+
+    uint16_t m_currentRomBank = 1;
 
     bool m_ramBanksDirty = false;
 

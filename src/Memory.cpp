@@ -41,6 +41,56 @@ void Memory::updateRTC(double deltaTimeSeconds)
     }
 }
 
+uint8_t Memory::read(size_t address)
+{
+    // Reading from ROM bank
+    if (address >= 0x4000 && address <= 0x7FFF)
+    {
+        return m_cartridge[(m_currentRomBank * 0x4000) + (address - 0x4000)];
+    }
+
+    // Reading from Echo RAM
+    if (address >= 0xE000 && address <= 0xFDFF)
+    {
+        address -= 0x2000;
+    }
+
+    return m_memory[address];
+}
+
+void Memory::write(size_t address, uint8_t value)
+{
+    // ROM bank number
+    if (address >= 0x2000 && address <= 0x3FFF)
+    {
+        uint8_t selectedRomBank = (value & 0x7F);
+        if (selectedRomBank == 0)
+        {
+            selectedRomBank++;
+        }
+        m_currentRomBank = selectedRomBank;
+        return;
+    }
+
+    // Writing to Echo RAM
+    if (address >= 0xE000 && address <= 0xFDFF)
+    {
+        address -= 0x2000;
+    }
+
+    // OAM DMA transfer
+    if (address == 0xFF46)
+    {
+        uint16_t sourceAddress = (uint16_t(std::clamp(static_cast<unsigned int>(value), 0u, 0xF1u)) << 8);
+        for (int i = 0; i <= 0x9F; i++)
+        {
+            write(0xFE00 | i, read(sourceAddress | i));
+        }
+    }
+
+    m_memory[address] = value;
+}
+
 MBC1::MBC1(uint8_t* cartridge, size_t cartridgeSize)
     : Memory(cartridge, cartridgeSize)
 {
