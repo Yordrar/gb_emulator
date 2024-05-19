@@ -2404,9 +2404,7 @@ uint64_t CPU::executeInstruction()
         // Unimplemented or not supported opcode
     default:
 #ifdef EMULATOR_DEBUG
-        OutputDebugStringA("Unknown opcode: ");
-        OutputDebugStringA(std::format("{:x}", opcode).c_str());
-        OutputDebugStringA("\n");
+        OutputDebugStringA(std::format("Unknown opcode 0x{:X} at memory address 0x{:X}\n", opcode, m_registers.PC-1).c_str());
         assert(false);
 #endif
         return 0;

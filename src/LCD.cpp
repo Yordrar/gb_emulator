@@ -25,10 +25,10 @@ void LCD::update(uint64_t cyclesToEmulate)
 	}
 
 	uint8_t LCDStatusRegister = m_memory->read(0xFF41);
-	uint8_t LYCLYInterruptEnable = 1;//(LCDStatusRegister & 0b01000000) >> 6;
-	uint8_t OAMInterruptEnable = 1;//(LCDStatusRegister & 0b00100000) >> 5;
-	uint8_t VBlankInterruptEnable = 1;//(LCDStatusRegister & 0b00010000) >> 4;
-	uint8_t HBlankInterruptEnable = 1;//(LCDStatusRegister & 0b00001000) >> 3;
+	uint8_t LYCLYInterruptEnable = (LCDStatusRegister & 0b01000000) >> 6;
+	uint8_t OAMInterruptEnable = (LCDStatusRegister & 0b00100000) >> 5;
+	uint8_t VBlankInterruptEnable = (LCDStatusRegister & 0b00010000) >> 4;
+	uint8_t HBlankInterruptEnable = (LCDStatusRegister & 0b00001000) >> 3;
 
 	m_timerCounter += cyclesToEmulate;
 
@@ -52,6 +52,7 @@ void LCD::update(uint64_t cyclesToEmulate)
 			// Enter hblank
 			m_timerCounter = 0;
 			m_memory->write(0xFF41, (m_memory->read(0xFF41) & 0b11111100));
+
 			if (HBlankInterruptEnable)
 			{
 				m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
@@ -72,16 +73,19 @@ void LCD::update(uint64_t cyclesToEmulate)
 			{
 				// Enter vblank
 				m_memory->write(0xFF41, (m_memory->read(0xFF41) & 0b11111100) | 1);
+
+				m_cpu->requestInterrupt(CPU::Interrupt::VBlank);
 				if (VBlankInterruptEnable)
 				{
 					m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
-					m_cpu->requestInterrupt(CPU::Interrupt::VBlank);
 				}
+
 				m_frameTexture.setNeedsCopyToGPU();
 			}
 			else
 			{
 				m_memory->write(0xFF41, (m_memory->read(0xFF41) & 0b11111100) | 2);
+
 				if (OAMInterruptEnable)
 				{
 					m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
@@ -101,10 +105,12 @@ void LCD::update(uint64_t cyclesToEmulate)
 			{
 				// Restart scanning modes
 				m_memory->write(0xFF41, (m_memory->read(0xFF41) & 0b11111100) | 2);
+
 				if (OAMInterruptEnable)
 				{
 					m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
 				}
+
 				m_currentLine = 0;
 			}
 		}
@@ -115,7 +121,7 @@ void LCD::update(uint64_t cyclesToEmulate)
 	m_memory->write(0xFF44, m_currentLine);
 
 	// Request interrupt if LYC==LY and is enabled
-	if (m_memory->read(0xFF44) == m_memory->read(0xFF45))
+	if (m_currentLine == m_memory->read(0xFF45))
 	{
 		m_memory->write(0xFF41, m_memory->read(0xFF41) | (1 << 2));
 		if (LYCLYInterruptEnable)

@@ -575,7 +575,7 @@ void MBC5::write(size_t address, uint8_t value)
     // 9th bit of the ROM bank number
     if (address >= 0x3000 && address <= 0x3FFF)
     {
-        uint8_t selectedRomBank = (value & 1);
+        uint16_t selectedRomBank = (value & 1) << 8;
         m_currentRomBank = (m_currentRomBank & 0x00FF) | selectedRomBank;
         return;
     }

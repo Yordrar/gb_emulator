@@ -10,13 +10,13 @@ complex ROMs. I decided not to make it more accurate to keep the scope small, as
 To open a ROM file, either drag it to the built exe file or pass the path as the first parameter in the command line.
 You can use either the keyboard or an xbox controller as input.
 Keyboard controls:
-Arrow keys: D-Pad
-Z: A button
-X: B button
-C: Start button
-V: Select button
+ - Arrow keys: D-Pad
+ - Z: A button
+ - X: B button
+ - C: Start button
+ - V: Select button
 
-The xbox controller maps the obvious buttons to the GB ones (D-Pad -> D-Pad, A button -> A button, etc.)
+The xbox controller maps the obvious buttons to the GB ones (D-Pad/Left Joystick -> D-Pad, A button -> A button, etc.)
 
 ## Build
 
