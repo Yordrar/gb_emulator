@@ -117,8 +117,7 @@ void Joypad::pollControllerInput()
                 m_currentInputDeviceType = InputDeviceType::Controller;
             }
 
-            // TODO maybe add joystick controls?
-            /*float LX = controllerState.Gamepad.sThumbLX;
+            float LX = controllerState.Gamepad.sThumbLX;
             float LY = controllerState.Gamepad.sThumbLY;
 
             float magnitude = sqrt(LX * LX + LY * LY);
@@ -128,18 +127,17 @@ void Joypad::pollControllerInput()
 
             if (magnitude > XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE)
             {
-                m_downPressed = normalizedLY < 0 ? 0 : 1;
-                m_upPressed = normalizedLY > 0 ? 0 : 1;
-                m_leftPressed = normalizedLX < 0 ? 0 : 1;
-                m_rightPressed = normalizedLX > 0 ? 0 : 1;
+                if (std::abs(normalizedLX) > std::abs(normalizedLY))
+                {
+                    m_leftPressed = normalizedLX < 0 ? 0 : 1;
+                    m_rightPressed = normalizedLX > 0 ? 0 : 1;
+                }
+                else
+                {
+                    m_downPressed = normalizedLY < 0 ? 0 : 1;
+                    m_upPressed = normalizedLY > 0 ? 0 : 1;
+                }
             }
-            else
-            {
-                m_downPressed = 1;
-                m_upPressed = 1;
-                m_leftPressed = 1;
-                m_rightPressed = 1;
-            }*/
         }
     }
 }
