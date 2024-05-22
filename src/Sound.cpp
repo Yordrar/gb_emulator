@@ -152,11 +152,16 @@ void Sound::updateChannel1Data()
     m_ch1WavePatternDuty = (NR11 >> 6) & 0x3;
     m_ch1EnvelopeInitial = (NR12 & 0xF0) >> 4;
     m_ch1EnvelopeDirection = (NR12 & 0x08) >> 3;
+    m_ch1DACEnabled = (NR12 & 0xF8) != 0 ? 1 : 0;
+    if (m_ch1DACEnabled == 0)
+    {
+        m_ch1Enabled = 0;
+    }
     m_ch1EnvelopePeriod = (NR12 & 0x07);
     m_ch1Frequency = (uint64_t(NR13) >> 0) | (uint64_t(NR14 & 7) << 8);
     m_ch1LengthEnabled = (NR14 >> 6) & 1;
 
-    if ((NR14 & 0x80) != 0 && (m_memory->read(0xFF26) & 0x80))
+    if ((NR14 & 0x80) != 0 && m_ch1DACEnabled == 1)
     {
         // Trigger event
         m_ch1Enabled = 1;
@@ -193,11 +198,16 @@ void Sound::updateChannel2Data()
     m_ch2WavePatternDuty = (NR21 >> 6) & 0x3;
     m_ch2EnvelopeInitial = (NR22 & 0xF0) >> 4;
     m_ch2EnvelopeDirection = (NR22 & 0x08) >> 3;
+    m_ch2DACEnabled = (NR22 & 0xF8) != 0 ? 1 : 0;
+    if (m_ch2DACEnabled == 0)
+    {
+        m_ch2Enabled = 0;
+    }
     m_ch2EnvelopeSweep = (NR22 & 0x07);
     m_ch2Frequency = (uint64_t(NR23) >> 0) | (uint64_t(NR24 & 7) << 8);
     m_ch2LengthEnabled = (NR24 & 0x4) >> 6;
 
-    if ((NR24 & 0x80) != 0 && (m_memory->read(0xFF26) & 0x80))
+    if ((NR24 & 0x80) != 0 && m_ch2DACEnabled == 1)
     {
         // Trigger event
         m_ch2Enabled = 1;
@@ -225,7 +235,12 @@ void Sound::updateChannel3Data()
     uint8_t NR33 = m_memory->read(0xFF1D);
     uint8_t NR34 = m_memory->read(0xFF1E);
 
-    m_ch3Enabled = (NR30 & 0x80) >> 7;
+    m_ch3DACEnabled = (NR30 & 0x80) >> 7;
+    if (m_ch3DACEnabled == 0)
+    {
+        m_ch3Enabled = 0;
+    }
+
     switch ((NR32 >> 5) & 0x3)
     {
     case 0:
@@ -248,7 +263,7 @@ void Sound::updateChannel3Data()
 
     m_ch3LengthEnabled = (NR34 & 0x4) >> 6;
 
-    if ((NR34 & 0x80) != 0 && (m_memory->read(0xFF26) & 0x80))
+    if ((NR34 & 0x80) != 0 && m_ch3DACEnabled == 1)
     {
         // Trigger event
         m_ch3Enabled = 1;
@@ -274,7 +289,9 @@ void Sound::updateChannel4Data()
     uint8_t NR43 = m_memory->read(0xFF22);
     uint8_t NR44 = m_memory->read(0xFF23);
 
-    if ((NR41 & 0b00111111) != 0 && (NR44 & 0x40) != 0)
+    m_ch4LengthEnabled = (NR44 & 0x40) != 0 ? 1 : 0;
+
+    if ((NR41 & 0b00111111) != 0 && m_ch4LengthEnabled != 0)
     {
         m_ch4SoundLength = 64 - (NR41 & 0b00111111);
         m_memory->write(0xFF20, NR41 & 0b11000000);
@@ -282,13 +299,18 @@ void Sound::updateChannel4Data()
 
     m_ch4EnvelopeInitial = (NR42 & 0xF0) >> 4;
     m_ch4EnvelopeDirection = (NR42 & 0x08) >> 3;
+    m_ch4DACEnabled = (NR42 & 0xF8) != 0 ? 1 : 0;
+    if (m_ch4DACEnabled == 0)
+    {
+        m_ch4Enabled = 0;
+    }
     m_ch4EnvelopeSweep = (NR42 & 0x07);
 
     m_ch4shiftClockFrequency = (NR43 & 0xF0) >> 4;
     m_ch4counterStep = (NR43 & 0x08) >> 3;
     m_ch4divRatioFrequencies = NR43 & 0x07;
 
-    if ((NR44 & 0x80) != 0 && (m_memory->read(0xFF26) & 0x80))
+    if ((NR44 & 0x80) != 0 && m_ch4DACEnabled == 1)
     {
         // Trigger event
         m_ch4Enabled = 1;

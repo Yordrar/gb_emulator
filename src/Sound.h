@@ -51,6 +51,7 @@ private:
 
     // Channel 1 data
     uint8_t m_ch1Enabled = 0;
+    uint8_t m_ch1DACEnabled = 0;
 
     uint8_t m_ch1SweepEnabled = 0;
     uint8_t m_ch1SweepTimer = 0;
@@ -77,6 +78,8 @@ private:
 
     // Channel 2 data
     uint8_t m_ch2Enabled = 0;
+    uint8_t m_ch2DACEnabled = 0;
+
     uint8_t m_ch2LengthTimer = 0;
     uint8_t m_ch2LengthEnabled = 0;
     uint8_t m_ch2SoundLength = 0;
@@ -95,16 +98,21 @@ private:
 
     // Channel 3 data
     uint8_t m_ch3Enabled = 0;
+    uint8_t m_ch3DACEnabled = 0;
+
     uint16_t m_ch3LengthTimer = 0;
     uint8_t m_ch3LengthEnabled = 0;
     uint16_t m_ch3SoundLength = 0;
+
     uint8_t m_ch3WavePosition = 0;
     uint64_t m_ch3Frequency = 0;
     int64_t m_ch3FrequencyTimer = 0;
+
     uint8_t m_ch3OutputLevel = 0;
 
     // Channel 4 data
     uint8_t m_ch4Enabled = 0;
+    uint8_t m_ch4DACEnabled = 0;
 
     uint64_t m_ch4Frequency = 0;
     int64_t m_ch4FrequencyTimer = 0;

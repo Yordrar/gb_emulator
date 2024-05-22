@@ -78,6 +78,22 @@ void Memory::write(size_t address, uint8_t value)
         address -= 0x2000;
     }
 
+    //Enable/Disable APU
+    if (address == 0xFF26)
+    {
+        bool newEnabled = (value >> 7) != 0;
+        bool wasEnabled = (m_memory[0xFF26] >> 7) != 0;
+        if (!newEnabled && wasEnabled)
+        {
+            for (uint16_t address = 0xFF10; address <= 0xFF25; address++)
+            {
+                m_memory[address] = 0;
+            }
+        }
+        m_memory[0xFF26] = (m_memory[0xFF26] & 0x0F) | value;
+        return;
+    }
+
     // OAM DMA transfer
     if (address == 0xFF46)
     {
@@ -191,6 +207,22 @@ void MBC1::write(size_t address, uint8_t value)
         address -= 0x2000;
     }
 
+    //Enable/Disable APU
+    if (address == 0xFF26)
+    {
+        bool newEnabled = (value >> 7) != 0;
+        bool wasEnabled = (m_memory[0xFF26] >> 7) != 0;
+        if (!newEnabled && wasEnabled)
+        {
+            for (uint16_t address = 0xFF10; address <= 0xFF25; address++)
+            {
+                m_memory[address] = 0;
+            }
+        }
+        m_memory[0xFF26] = (m_memory[0xFF26] & 0x0F) | value;
+        return;
+    }
+
     // OAM DMA transfer
     if (address == 0xFF46)
     {
@@ -287,6 +319,22 @@ void MBC2::write(size_t address, uint8_t value)
     if (address >= 0xE000 && address <= 0xFDFF)
     {
         address -= 0x2000;
+    }
+
+    //Enable/Disable APU
+    if (address == 0xFF26)
+    {
+        bool newEnabled = (value >> 7) != 0;
+        bool wasEnabled = (m_memory[0xFF26] >> 7) != 0;
+        if (!newEnabled && wasEnabled)
+        {
+            for (uint16_t address = 0xFF10; address <= 0xFF25; address++)
+            {
+                m_memory[address] = 0;
+            }
+        }
+        m_memory[0xFF26] = (m_memory[0xFF26] & 0x0F) | value;
+        return;
     }
 
     // OAM DMA transfer
@@ -484,6 +532,22 @@ void MBC3::write(size_t address, uint8_t value)
         address -= 0x2000;
     }
 
+    //Enable/Disable APU
+    if (address == 0xFF26)
+    {
+        bool newEnabled = (value >> 7) != 0;
+        bool wasEnabled = (m_memory[0xFF26] >> 7) != 0;
+        if (!newEnabled && wasEnabled)
+        {
+            for (uint16_t address = 0xFF10; address <= 0xFF25; address++)
+            {
+                m_memory[address] = 0;
+            }
+        }
+        m_memory[0xFF26] = (m_memory[0xFF26] & 0x0F) | value;
+        return;
+    }
+
     // OAM DMA transfer
     if (address == 0xFF46)
     {
@@ -601,6 +665,22 @@ void MBC5::write(size_t address, uint8_t value)
     if (address >= 0xE000 && address <= 0xFDFF)
     {
         address -= 0x2000;
+    }
+
+    //Enable/Disable APU
+    if (address == 0xFF26)
+    {
+        bool newEnabled = (value >> 7) != 0;
+        bool wasEnabled = (m_memory[0xFF26] >> 7) != 0;
+        if (!newEnabled && wasEnabled)
+        {
+            for (uint16_t address = 0xFF10; address <= 0xFF25; address++)
+            {
+                m_memory[address] = 0;
+            }
+        }
+        m_memory[0xFF26] = (m_memory[0xFF26] & 0x0F) | value;
+        return;
     }
 
     // OAM DMA transfer
