@@ -25,6 +25,8 @@ public:
     void requestInterrupt(Interrupt interrupt);
     uint64_t executeInstruction();
 
+    bool isHalted() const { return m_isHalted; }
+
 private:
     void jumpToInterruptIfAnyPending();
 

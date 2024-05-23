@@ -844,7 +844,7 @@ uint64_t CPU::executeInstruction()
         // Technically not correct, but eh, should be fine
         // TODO maybe fix this in the future
         m_registers.PC--;
-        return 4;
+        return 0;
         break;
     case 0xF3:
         m_interruptMasterEnableFlag = false;

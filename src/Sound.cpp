@@ -98,7 +98,7 @@ void Sound::update(uint64_t cyclesToEmulate)
                 float sampleCh2 = (waveSampleCh2 / 7.5f) - 1.0f;
 
                 uint8_t waveSampleCh3 = ( m_memory->read(0xFF30 + (m_ch3WavePosition / 2) ) >> ((m_ch3WavePosition & 1) != 0 ? 0 : 4) ) & 0x0F;
-                waveSampleCh3 = waveSampleCh3 >> (m_ch3OutputLevel != 4 ? 0 : m_ch3OutputLevel); // output level seems to mute this channel a lot, possible bug?
+                waveSampleCh3 = waveSampleCh3 >> m_ch3OutputLevel;
                 float sampleCh3 = (waveSampleCh3 / 7.5f) - 1.0f;
 
                 float sampleCh4 = static_cast<float>( ((~m_LFSR) & 1) * m_ch4CurrentVolume );
@@ -182,7 +182,7 @@ void Sound::updateChannel1Data()
     }
     if ((NR11 & 0b00111111) != 0 && m_ch1LengthEnabled)
     {
-        m_ch1SoundLength = 64 - (NR11 & 0b00111111);
+        m_ch1LengthTimer = 64 - (NR11 & 0b00111111);
         m_memory->write(0xFF16, NR11 & 0b11000000);
     }
     m_memory->write(0xFF14, NR14 & 0x7F);
@@ -221,7 +221,7 @@ void Sound::updateChannel2Data()
     }
     if ((NR21 & 0b00111111) != 0 && m_ch2LengthEnabled)
     {
-        m_ch2SoundLength = 64 - (NR21 & 0b00111111);
+        m_ch2LengthTimer = 64 - (NR21 & 0b00111111);
         m_memory->write(0xFF16, NR21 & 0b11000000);
     }
     m_memory->write(0xFF19, NR24 & 0x7F);
@@ -276,7 +276,7 @@ void Sound::updateChannel3Data()
     }
     if (NR31 != 0 && (NR34 & 0x40) != 0)
     {
-        m_ch3SoundLength = 256 - NR31;
+        m_ch3LengthTimer = 256 - NR31;
         m_memory->write(0xFF1B, 0);
     }
     m_memory->write(0xFF1E, NR34 & 0x7F);
@@ -293,7 +293,7 @@ void Sound::updateChannel4Data()
 
     if ((NR41 & 0b00111111) != 0 && m_ch4LengthEnabled != 0)
     {
-        m_ch4SoundLength = 64 - (NR41 & 0b00111111);
+        m_ch4LengthTimer = 64 - (NR41 & 0b00111111);
         m_memory->write(0xFF20, NR41 & 0b11000000);
     }
 

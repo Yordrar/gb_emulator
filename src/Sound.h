@@ -62,7 +62,6 @@ private:
 
     uint8_t m_ch1LengthTimer = 0;
     uint8_t m_ch1LengthEnabled = 0;
-    uint8_t m_ch1SoundLength = 0;
 
     uint8_t m_ch1WavePatternDuty = 0;
     uint8_t m_ch1DutyPosition = 0;
@@ -82,7 +81,6 @@ private:
 
     uint8_t m_ch2LengthTimer = 0;
     uint8_t m_ch2LengthEnabled = 0;
-    uint8_t m_ch2SoundLength = 0;
 
     uint8_t m_ch2WavePatternDuty = 0;
     uint8_t m_ch2DutyPosition = 0;
@@ -102,7 +100,6 @@ private:
 
     uint16_t m_ch3LengthTimer = 0;
     uint8_t m_ch3LengthEnabled = 0;
-    uint16_t m_ch3SoundLength = 0;
 
     uint8_t m_ch3WavePosition = 0;
     uint64_t m_ch3Frequency = 0;
@@ -119,7 +116,6 @@ private:
 
     uint8_t m_ch4LengthTimer = 0;
     uint8_t m_ch4LengthEnabled = 0;
-    uint8_t m_ch4SoundLength = 0;
 
     uint8_t m_ch4EnvelopeInitial = 0;
     uint8_t m_ch4EnvelopeDirection = 0;

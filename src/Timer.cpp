@@ -30,7 +30,11 @@ void Timer::update(uint64_t cyclesToEmulate)
         m_timerClock++;
 
         // DIV
-        if ((m_timerClock % (CPU::FrequencyHz / 16384)) == 0)
+        if (m_cpu->isHalted())
+        {
+            m_dividerRegister = 0;
+        }
+        else if ((m_timerClock % (CPU::FrequencyHz / 16384)) == 0)
         {
             m_dividerRegister = (m_dividerRegister + 1) % 256;
         }

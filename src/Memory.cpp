@@ -366,7 +366,6 @@ void MBC2::loadRamBanksFromFile(std::ifstream& file)
 
 MBC3::MBC3(uint8_t* cartridge, size_t cartridgeSize)
     : Memory(cartridge, cartridgeSize)
-    , m_currentBankingMode(1)
 {
 }
 
@@ -480,7 +479,7 @@ void MBC3::write(size_t address, uint8_t value)
 
     if (address >= 0x6000 && address <= 0x7FFF)
     {
-        m_currentBankingMode = (value & 1);
+        // TODO latch clock data. really needed?
         return;
     }
 

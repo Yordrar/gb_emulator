@@ -106,8 +106,6 @@ public:
     virtual void loadRamBanksFromFile(std::ifstream& file) override;
 
 private:
-    uint8_t m_currentBankingMode = 0;
-
     uint8_t m_currentRomBank = 0;
 
     uint8_t m_currentRamBank = 0;
