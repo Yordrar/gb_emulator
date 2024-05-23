@@ -408,27 +408,27 @@ uint8_t MBC3::read(size_t address)
         }
         case 0x08:
         {
-            return m_rtcSeconds;
+            return m_latchedRtcSeconds;
             break;
         }
         case 0x09:
         {
-            return m_rtcMinutes;
+            return m_latchedRtcMinutes;
             break;
         }
         case 0x0A:
         {
-            return m_rtcHours;
+            return m_latchedRtcHours;
             break;
         }
         case 0x0B:
         {
-            return m_rtcLowerDayCounter;
+            return m_latchedRtcLowerDayCounter;
             break;
         }
         case 0x0C:
         {
-            return m_rtcUpperDayCounter;
+            return m_latchedRtcUpperDayCounter;
             break;
         }
         };
@@ -479,7 +479,15 @@ void MBC3::write(size_t address, uint8_t value)
 
     if (address >= 0x6000 && address <= 0x7FFF)
     {
-        // TODO latch clock data. really needed?
+        if (value == 1 && m_latch == 0)
+        {
+            m_latchedRtcSeconds = m_rtcSeconds;
+            m_latchedRtcMinutes = m_rtcMinutes;
+            m_latchedRtcHours = m_rtcHours;
+            m_latchedRtcLowerDayCounter = m_rtcLowerDayCounter;
+            m_latchedRtcUpperDayCounter = m_rtcUpperDayCounter;
+        }
+        m_latch = value;
         return;
     }
 

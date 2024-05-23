@@ -72,6 +72,8 @@ void CPU::requestInterrupt(Interrupt interrupt)
 
 uint64_t CPU::executeInstruction()
 {
+    m_hasWrittenToDIVLastCycle = false;
+
     jumpToInterruptIfAnyPending();
 
     uint8_t opcode = 0x00;
@@ -1169,6 +1171,7 @@ uint64_t CPU::executeInstruction()
         return 8;
         break;
     case 0xE2:
+        m_hasWrittenToDIVLastCycle = (m_registers.C == 0x04);
         m_memory->write(0xFF00 + m_registers.C, m_registers.A);
         return 8;
         break;
@@ -1194,6 +1197,7 @@ uint64_t CPU::executeInstruction()
         break;
     case 0xE0:
         offset = m_memory->read(m_registers.PC++);
+        m_hasWrittenToDIVLastCycle = (offset == 0x04);
         m_memory->write(0xFF00 + offset, m_registers.A);
         if (offset == 0x00 && m_joypad->updateJOYPRegister())
         {

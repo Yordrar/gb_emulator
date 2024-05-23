@@ -52,6 +52,13 @@ protected:
     uint8_t m_rtcHours = 0;
     uint8_t m_rtcLowerDayCounter = 0;
     uint8_t m_rtcUpperDayCounter = 0;
+
+    uint8_t m_latch = 0;
+    uint8_t m_latchedRtcSeconds = 0;
+    uint8_t m_latchedRtcMinutes = 0;
+    uint8_t m_latchedRtcHours = 0;
+    uint8_t m_latchedRtcLowerDayCounter = 0;
+    uint8_t m_latchedRtcUpperDayCounter = 0;
 };
 
 class MBC1 : public Memory

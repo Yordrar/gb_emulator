@@ -26,6 +26,7 @@ public:
     uint64_t executeInstruction();
 
     bool isHalted() const { return m_isHalted; }
+    bool hasWrittenToDIVLastCycle() const { return m_hasWrittenToDIVLastCycle; }
 
 private:
     void jumpToInterruptIfAnyPending();
@@ -95,6 +96,8 @@ private:
     bool m_interruptMasterEnableFlag;
     bool m_isHalted;
     bool m_hadPendingInterruptsWhenHalted;
+
+    bool m_hasWrittenToDIVLastCycle = false;
 
     Memory* m_memory;
 
