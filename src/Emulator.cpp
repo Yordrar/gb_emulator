@@ -97,12 +97,11 @@ void Emulator::emulate()
     auto elapsedNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     double deltaTimeSeconds = std::chrono::abs(elapsedNanoseconds).count() / 1000000000.0;
 
+    start = std::chrono::high_resolution_clock::now();
+
     saveTimer += deltaTimeSeconds;
 
-    if (deltaTimeSeconds != 0.0)
-    {
-        m_memory->updateRTC(deltaTimeSeconds);
-    }
+    m_memory->updateRTC(deltaTimeSeconds);
 
     uint64_t executedCycles = m_cpu->executeInstruction();
     m_sound->update(executedCycles);
@@ -117,8 +116,6 @@ void Emulator::emulate()
             saveBatteryBackedRamToFile();
         }
     }
-
-    start = std::chrono::high_resolution_clock::now();
 }
 
 void Emulator::processKeyboardInput(WPARAM wParam, LPARAM lParam)
@@ -338,7 +335,8 @@ bool Emulator::CartridgeInfo::hasMBC2() const
 
 bool Emulator::CartridgeInfo::hasMBC3() const
 {
-    return m_type == 0x10 ||
+    return m_type == 0x0F ||
+        m_type == 0x10 ||
         m_type == 0x11 ||
         m_type == 0x12 ||
         m_type == 0x13;

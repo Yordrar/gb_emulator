@@ -17,24 +17,44 @@ Memory::~Memory()
 
 void Memory::updateRTC(double deltaTimeSeconds)
 {
+    if (((m_rtcUpperDayCounter >> 6) & 1) == 1)
+    {
+        return;
+    }
+
     m_rtcCounter += deltaTimeSeconds;
 
     if (m_rtcCounter >= 1.0)
     {
         m_rtcCounter = 0;
         m_rtcSeconds++;
-        if (m_rtcSeconds >= 60)
+        m_rtcSeconds &= 0x3F;
+        if (m_rtcSeconds == 60)
         {
             m_rtcSeconds = 0;
             m_rtcMinutes++;
-            if (m_rtcMinutes >= 60)
+            m_rtcMinutes &= 0x3F;
+            if (m_rtcMinutes == 60)
             {
                 m_rtcMinutes = 0;
                 m_rtcHours++;
-                if (m_rtcHours >= 24)
+                m_rtcHours &= 0x1F;
+                if (m_rtcHours == 24)
                 {
                     m_rtcHours = 0;
                     m_rtcLowerDayCounter++;
+                    if (m_rtcLowerDayCounter == 0)
+                    {
+                        if ((m_rtcUpperDayCounter & 1) == 1)
+                        {
+                            m_rtcUpperDayCounter &= ~1;
+                            m_rtcUpperDayCounter |= 0x80;
+                        }
+                        else
+                        {
+                            m_rtcUpperDayCounter |= 1;
+                        }
+                    }
                 }
             }
         }
@@ -381,7 +401,7 @@ uint8_t MBC3::read(size_t address)
         return m_cartridge[(m_currentRomBank * 0x4000) + (address - 0x4000)];
     }
 
-    // Reading from RAM bank
+    // Reading from RAM bank or RTC registers
     if (address >= 0xA000 && address <= 0xBFFF)
     {
         switch (m_currentRamBank)
@@ -477,6 +497,7 @@ void MBC3::write(size_t address, uint8_t value)
         return;
     }
 
+    // Latch RTC registers
     if (address >= 0x6000 && address <= 0x7FFF)
     {
         if (value == 1 && m_latch == 0)
@@ -509,19 +530,19 @@ void MBC3::write(size_t address, uint8_t value)
             m_ramBank3[(address - 0xA000)] = value;
             break;
         case 0x08:
-            m_rtcSeconds = value;
+            m_rtcSeconds = value & 0x3F;
             break;
         case 0x09:
-            m_rtcMinutes = value;
+            m_rtcMinutes = value & 0x3F;
             break;
         case 0x0A:
-            m_rtcHours = value;
+            m_rtcHours = value & 0x1F;
             break;
         case 0x0B:
             m_rtcLowerDayCounter = value;
             break;
         case 0x0C:
-            m_rtcUpperDayCounter = value;
+            m_rtcUpperDayCounter = value & 0xC1;
             break;
         }
 
