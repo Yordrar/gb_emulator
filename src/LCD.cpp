@@ -258,6 +258,17 @@ void LCD::writeScanlineToFrame()
 				uint16_t beginSpriteTileData = 0x8000;
 
 				int spriteOffsetY = m_currentLine - spriteY;
+				if (spriteYFlip)
+				{
+					if (SpriteSize)
+					{
+						spriteOffsetY = 15 - spriteOffsetY;
+					}
+					else
+					{
+						spriteOffsetY = 7 - spriteOffsetY;
+					}
+				}
 				if (SpriteSize) // if 8x16 mode, adjust the sprite tile number
 				{
 					if (spriteOffsetY < 8)
@@ -269,10 +280,6 @@ void LCD::writeScanlineToFrame()
 						spriteOffsetY -= 8;
 						spriteTile |= 0x01;
 					}
-				}
-				if (spriteYFlip)
-				{
-					spriteOffsetY = 7 - spriteOffsetY;
 				}
 				for (int j = 0; j < 8; j++)
 				{
