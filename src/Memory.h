@@ -98,6 +98,7 @@ public:
 
 private:
     uint16_t m_currentRomBank = 1;
+    bool m_enableRam = true;
 };
 
 class MBC3 : public Memory
@@ -120,6 +121,8 @@ private:
     uint8_t m_ramBank1[0x2000] = {};
     uint8_t m_ramBank2[0x2000] = {};
     uint8_t m_ramBank3[0x2000] = {};
+
+    bool m_enableRam = true;
 };
 
 class MBC5 : public Memory
@@ -139,4 +142,6 @@ private:
 
     uint8_t m_currentRamBank = 0;
     uint8_t m_ramBanks[0x20000] = {};
+
+    bool m_enableRam = true;
 };

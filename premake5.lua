@@ -25,7 +25,7 @@ filter "Debugopt"
 	optimize "debug"
 	targetdir "build/bin/debugopt"
 	debugdir "build/bin/debugopt"
-	defines {"RENDERER_DEBUG", "EMULATOR_DEBUGOPT"}
+	defines {"RENDERER_DEBUG", "EMULATOR_DEBUG"}
 
 filter "Release"
 	runtime "Release"

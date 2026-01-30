@@ -9,6 +9,11 @@ Memory::Memory(uint8_t* cartridge, size_t cartridgeSize)
     , m_cartridgeSize(cartridgeSize)
 {
     std::memcpy(m_memory, m_cartridge, std::min(0x7FFF, static_cast<int>(m_cartridgeSize)));
+
+    for (uint16_t addr = 0xFF4C; addr <= 0xFF7F; ++addr)
+    {
+        m_memory[addr] = 0xFF; // CGB-only I/O Reg
+    }
 }
 
 Memory::~Memory()
@@ -122,6 +127,11 @@ void Memory::write(size_t address, uint8_t value)
         {
             write(0xFE00 | i, read(sourceAddress | i));
         }
+    }
+
+    if (address >= 0xFF4C && address <= 0xFF7F)
+    {
+        return;
     }
 
     m_memory[address] = value;
@@ -253,6 +263,11 @@ void MBC1::write(size_t address, uint8_t value)
         }
     }
 
+    if (address >= 0xFF4C && address <= 0xFF7F)
+    {
+        return;
+    }
+
     m_memory[address] = value;
 }
 
@@ -367,6 +382,11 @@ void MBC2::write(size_t address, uint8_t value)
         }
     }
 
+    if (address >= 0xFF4C && address <= 0xFF7F)
+    {
+        return;
+    }
+
     m_memory[address] = (value & 0x0F);
 }
 
@@ -404,6 +424,11 @@ uint8_t MBC3::read(size_t address)
     // Reading from RAM bank or RTC registers
     if (address >= 0xA000 && address <= 0xBFFF)
     {
+        if (!m_enableRam)
+        {
+            return 0;
+        }
+
         switch (m_currentRamBank)
         {
         case 0:
@@ -465,15 +490,16 @@ uint8_t MBC3::read(size_t address)
 
 void MBC3::write(size_t address, uint8_t value)
 {
+    // RAM and Timer enable
     if (address >= 0x0000 && address <= 0x1FFF)
     {
         if ((value & 0x0F) == 0x0A)
         {
-            // TODO enable RAM
+            m_enableRam = true;
         }
-        else
+        else if ((value & 0x0F) == 0x00)
         {
-            // TODO disable RAM
+            m_enableRam = false;
         }
         return;
     }
@@ -513,7 +539,7 @@ void MBC3::write(size_t address, uint8_t value)
     }
 
     // Writing to RAM bank
-    if (address >= 0xA000 && address <= 0xBFFF)
+    if (address >= 0xA000 && address <= 0xBFFF && m_enableRam)
     {
         switch (m_currentRamBank)
         {
@@ -584,6 +610,11 @@ void MBC3::write(size_t address, uint8_t value)
         {
             write(0xFE00 | i, read(sourceAddress | i));
         }
+    }
+
+    if (address >= 0xFF4C && address <= 0xFF7F)
+    {
+        return;
     }
 
     m_memory[address] = value;
@@ -719,6 +750,11 @@ void MBC5::write(size_t address, uint8_t value)
         {
             write(0xFE00 | i, read(sourceAddress | i));
         }
+    }
+
+    if (address >= 0xFF4C && address <= 0xFF7F)
+    {
+        return;
     }
 
     m_memory[address] = value;

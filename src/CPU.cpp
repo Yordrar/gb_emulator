@@ -107,6 +107,8 @@ uint64_t CPU::executeInstruction()
         opcode = m_memory->read(m_registers.PC++);
     }
 
+    OutputDebugStringA(std::format("{:X} {:X}\n", m_registers.PC - 1, opcode).c_str());
+
     uint16_t address = 0;
     uint8_t offset = 0;
     uint8_t n = 0;

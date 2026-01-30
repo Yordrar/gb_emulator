@@ -127,7 +127,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     }
 
     // TODO implement UI for loading ROMs
-    bool show_window = false;
+    bool show_window = true;
     renderer->registerImguiCallback([&show_window, &renderer, &mainPass, &emulator]()
         {
             if (show_window)
