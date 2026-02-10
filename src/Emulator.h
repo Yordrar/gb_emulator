@@ -40,6 +40,8 @@ public:
     };
 
     void openRomFile(char const* romFilename);
+    void closeCurrentRom() { m_hasOpenedRomFile = false; }
+    bool hasOpenedRomFile() const { return m_hasOpenedRomFile; }
     CartridgeInfo getCartridgeInfo() const { return m_cartridgeInfo; }
 
     void emulate();
@@ -50,6 +52,8 @@ public:
 
 private:
     void extractCartridgeInfo();
+
+    bool m_hasOpenedRomFile = false;
 
     ResourceHandle m_frameTexture;
     uint8_t* m_frameTextureData;

@@ -85,11 +85,14 @@ void Emulator::openRomFile(char const* romFilename)
     m_lcd = std::make_unique<LCD>(m_cpu.get(), m_memory.get(), m_frameTexture, m_frameTextureData);
 
     loadSavFileToRam();
+
+    m_hasOpenedRomFile = true;
 }
 
 static double saveTimer = 0.0;
 void Emulator::emulate()
 {
+    if (!m_hasOpenedRomFile) return;
     if (!m_cartridge) return;
 
     end = std::chrono::high_resolution_clock::now();

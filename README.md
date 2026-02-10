@@ -9,7 +9,8 @@ It features keyboard and Xbox controller support through Xinput, and memory bank
 
 ## Usage
 
-To open a ROM file, either drag it to the built exe file or pass the path as the first parameter in the command line, like
+To open a ROM file, use the menu bar at the top to open the file dialog and choose a valid rom.
+You can also either drag it to the built exe file or pass the path as the first parameter in the command line, like
 ```
 > gb_emulator.exe MyRom.gb
 ```

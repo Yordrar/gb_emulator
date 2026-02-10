@@ -27,6 +27,7 @@ using namespace Microsoft::WRL;
 #include <geometry/MaterialManager.h>
 
 #include <imgui/imgui.h>
+#include <ImGuiFileDialog/ImGuiFileDialog.h>
 
 // Emulator
 #include "Emulator.h"
@@ -121,19 +122,49 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     {
         emulator.openRomFile(WideStrToStr(pCmdLine).c_str());
     }
-    else
-    {
-        return 0;
-    }
 
     // TODO implement UI for loading ROMs
-    bool show_window = true;
-    renderer->registerImguiCallback([&show_window, &renderer, &mainPass, &emulator]()
+    bool showInfoWindow = false;
+    renderer->registerImguiCallback([&showInfoWindow, &renderer, &mainPass, &emulator]()
         {
-            if (show_window)
+            if (ImGui::BeginMainMenuBar())
+            {
+                if (ImGui::BeginMenu("File"))
+                {
+                    if (ImGui::MenuItem("Open ROM...", "Ctrl+O"))
+                    {
+                        IGFD::FileDialogConfig config;
+                        config.path = ".";
+                        ImGuiFileDialog::Instance()->OpenDialog("OpenROMFileDialogKey", "Choose ROM File", ".gb", config);
+                    }
+                    ImGui::EndMenu();
+                }
+                if (ImGui::BeginMenu("View"))
+                {
+                    if (ImGui::MenuItem("View ROM Info...") && emulator.hasOpenedRomFile())
+                    {
+                        showInfoWindow = true;
+                    }
+                    ImGui::EndMenu();
+                }
+                ImGui::EndMainMenuBar();
+            }
+
+            if (ImGuiFileDialog::Instance()->Display("OpenROMFileDialogKey"))
+            {
+                if (ImGuiFileDialog::Instance()->IsOk())
+                {
+                    std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+                    std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+                    emulator.openRomFile(filePathName.c_str());
+                }
+                ImGuiFileDialog::Instance()->Close();
+            }
+
+            if (showInfoWindow)
             {
                 Emulator::CartridgeInfo cartInfo = emulator.getCartridgeInfo();
-                ImGui::Begin("Cartridge Info", &show_window);
+                ImGui::Begin("Cartridge Info", &showInfoWindow);
                 ImGui::Text("Name: %s", cartInfo.m_name.c_str());
                 ImGui::Text("Is CGB: %s", cartInfo.m_isColorGB ? "yes" : "no");
                 ImGui::Text("Is Non-CGB backwards compatible: %s", cartInfo.m_isNonCGBCompatible || !cartInfo.m_isColorGB ? "yes" : "no");
@@ -141,7 +172,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
                 ImGui::Text("Type: %s", cartInfo.getCartridgeTypeStr().c_str());
                 if (cartInfo.m_romSize / 1024 >= 1024)
                 {
-                    ImGui::Text("ROM Size: %dMB", cartInfo.m_romSize / (1024*1024));
+                    ImGui::Text("ROM Size: %dMB", cartInfo.m_romSize / (1024 * 1024));
                 }
                 else
                 {
@@ -172,9 +203,10 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 
     while (!window.shouldCloseWindow())
     {
-        emulator.emulate();
+        if(emulator.hasOpenedRomFile())
+            emulator.emulate();
 
-        if (ResourceManager::it().getResourceNeedsCopyToGPU(frameTexture))
+        if (!emulator.hasOpenedRomFile() || ResourceManager::it().getResourceNeedsCopyToGPU(frameTexture))
         {
             renderer->beginFrame();
             renderer->submitRenderPass(mainPass, *scene, { &scene->getCamera() });
