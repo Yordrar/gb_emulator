@@ -7,6 +7,7 @@
 #include <string>
 #include <format>
 #include <cassert>
+#include <vector>
 #endif
 
 #include "Memory.h"
@@ -74,7 +75,11 @@ uint64_t CPU::executeInstruction()
 {
     m_hasWrittenToDIVLastCycle = false;
 
-    jumpToInterruptIfAnyPending();
+    if (areTherePendingInterrupts())
+    {
+        jumpToPendingInterrupts();
+        return 5;
+    }
 
     if (m_joypad->updateJOYPRegister())
     {
@@ -2419,7 +2424,15 @@ uint64_t CPU::executeInstruction()
     }
 }
 
-void CPU::jumpToInterruptIfAnyPending()
+bool CPU::areTherePendingInterrupts()
+{
+    uint8_t interruptFlag = m_memory->read(0xFF0F);
+    uint8_t interruptEnable = m_memory->read(0xFFFF);
+
+    return m_interruptMasterEnableFlag && ((interruptFlag & 0x1F) & (interruptEnable & 0x1F));
+}
+
+void CPU::jumpToPendingInterrupts()
 {
     if (!m_interruptMasterEnableFlag)
     {
@@ -2448,9 +2461,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_registers.PC = 0x0040;
         m_isHalted = false;
     }
-
     // LCD_STAT interrupt
-    if ((interruptFlag & 2) && (interruptEnable & 2))
+    else if ((interruptFlag & 2) && (interruptEnable & 2))
     {
         m_memory->write(0xFF0F, interruptFlag & ~2);
         m_interruptMasterEnableFlag = false;
@@ -2460,9 +2472,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_registers.PC = 0x0048;
         m_isHalted = false;
     }
-
     // Timer interrupt
-    if ((interruptFlag & 4) && (interruptEnable & 4))
+    else if ((interruptFlag & 4) && (interruptEnable & 4))
     {
         m_memory->write(0xFF0F, interruptFlag & ~4);
         m_interruptMasterEnableFlag = false;
@@ -2472,9 +2483,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_registers.PC = 0x0050;
         m_isHalted = false;
     }
-
     // Serial interrupt
-    if ((interruptFlag & 8) && (interruptEnable & 8))
+    else if ((interruptFlag & 8) && (interruptEnable & 8))
     {
         m_memory->write(0xFF0F, interruptFlag & ~8);
         m_interruptMasterEnableFlag = false;
@@ -2484,9 +2494,8 @@ void CPU::jumpToInterruptIfAnyPending()
         m_registers.PC = 0x0058;
         m_isHalted = false;
     }
-
     // Joypad interrupt
-    if ((interruptFlag & 16) && (interruptEnable & 16))
+    else if ((interruptFlag & 16) && (interruptEnable & 16))
     {
         m_memory->write(0xFF0F, interruptFlag & ~16);
         m_interruptMasterEnableFlag = false;

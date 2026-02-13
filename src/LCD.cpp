@@ -3,6 +3,9 @@
 #include "CPU.h"
 #include "Memory.h"
 
+#include <vector>
+#include <algorithm>
+
 LCD::LCD(CPU* cpu, Memory* memory, ResourceHandle frameTexture, uint8_t* frameTextureData)
     : m_cpu(cpu)
 	, m_memory(memory)
@@ -144,6 +147,11 @@ static const RGB lospecPalette[4] = { {0xC7, 0xC6, 0xC6}, {0x7C, 0x6D, 0x80}, {0
 static const RGB greyscalePalette[4] = { {255, 255, 255}, {168, 168, 168}, {84, 84, 84}, {0, 0, 0} };
 
 static const RGB* currentPalette = lospecPalette;
+
+struct Sprite
+{
+	int spriteY, spriteX, tileIndex, attributes, locationInOAM;
+};
 void LCD::writeScanlineToFrame()
 {
 	// Read LCD control register
@@ -234,22 +242,61 @@ void LCD::writeScanlineToFrame()
 	uint8_t spritesDrawnThisScanline = 0;
 	if (SpriteDisplayEnable)
 	{
+		// Put all sprites into a structure to filter them easier later
+		std::vector<Sprite> sprites;
 		for (int i = 0; i < 40; i++)
 		{
-			if (spritesDrawnThisScanline >= 10)
+			Sprite sprite;
+			sprite.spriteY = m_memory->read(0xFE00 + (i * 4));
+			sprite.spriteX = m_memory->read(0xFE00 + (i * 4) + 1);
+			sprite.tileIndex = m_memory->read(0xFE00 + (i * 4) + 2);
+			sprite.attributes = m_memory->read(0xFE00 + (i * 4) + 3);
+			sprite.locationInOAM = i;
+			sprites.push_back(sprite);
+		}
+		std::vector<Sprite> spritesToDraw;
+		// Selection priority, first 10 in mem that can be drawn are selected
+		for (int i = 0; i < 40; i++)
+		{
+			Sprite const& sprite = sprites[i];
+			if ((sprite.spriteY - 16) <= m_currentLine &&
+				(sprite.spriteY - 16 + (SpriteSize ? 16 : 8)) > m_currentLine)
+			{
+				spritesToDraw.push_back(sprite);
+			}
+			if (spritesToDraw.size() >= 10)
 			{
 				break;
 			}
-
-			uint8_t spriteY = m_memory->read(0xFE00 + (i * 4)) - 16;
-			uint8_t spriteX = m_memory->read(0xFE00 + (i * 4) + 1) - 8;
-			if (spriteY <= m_currentLine && (spriteY + (SpriteSize ? 16 : 8)) > m_currentLine &&
-				spriteX >= 0 && spriteX < 160)
+		}
+		// Drawing priority
+		std::sort(spritesToDraw.begin(), spritesToDraw.end(), [](Sprite const& a, Sprite const& b)
 			{
-				spritesDrawnThisScanline++;
+				if (a.spriteX < b.spriteX) return true;
+				if (a.spriteX == b.spriteX && a.locationInOAM < b.locationInOAM) return true;
+				return false;
+			});
+		for (int rowPixel = 0; rowPixel < 160; ++rowPixel)
+		{
+			std::vector<Sprite> spritesInThisPixel;
+			for (int i = 0; i < spritesToDraw.size(); ++i)
+			{
+				if (spritesToDraw[i].spriteX - 8 <= rowPixel && spritesToDraw[i].spriteX > rowPixel)
+				{
+					spritesInThisPixel.push_back(spritesToDraw[i]);
+				}
+			}
 
-				uint8_t spriteTile = m_memory->read(0xFE00 + (i * 4) + 2);
-				uint8_t spriteAttributes = m_memory->read(0xFE00 + (i * 4) + 3);
+			uint8_t currentBGRed = m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4];
+			uint8_t currentBGGreen = m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1];
+			uint8_t currentBGBlue = m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2];
+
+			for (int i = spritesInThisPixel.size() - 1; i >= 0; i--)
+			{
+				uint8_t spriteY = spritesInThisPixel[i].spriteY;
+				uint8_t spriteX = spritesInThisPixel[i].spriteX;
+				uint8_t spriteTile = spritesInThisPixel[i].tileIndex;
+				uint8_t spriteAttributes = spritesInThisPixel[i].attributes;
 				uint8_t OBJtoBGPriority = (spriteAttributes & 128) >> 7;
 				uint8_t spriteYFlip = (spriteAttributes & 64) >> 6;
 				uint8_t spriteXFlip = (spriteAttributes & 32) >> 5;
@@ -257,7 +304,7 @@ void LCD::writeScanlineToFrame()
 				uint8_t paletteColors = paletteNumber ? m_memory->read(0xFF49) : m_memory->read(0xFF48);
 				uint16_t beginSpriteTileData = 0x8000;
 
-				int spriteOffsetY = m_currentLine - spriteY;
+				int spriteOffsetY = m_currentLine - (spriteY - 16);
 				if (spriteYFlip)
 				{
 					if (SpriteSize)
@@ -281,32 +328,33 @@ void LCD::writeScanlineToFrame()
 						spriteTile |= 0x01;
 					}
 				}
-				for (int j = 0; j < 8; j++)
+				int spriteOffsetX = 7 - (rowPixel - (spriteX - 8));
+				if (spriteXFlip)
 				{
-					int spriteOffsetX = 7 - j;
-					if (spriteXFlip)
+					spriteOffsetX = 7 - spriteOffsetX;
+				}
+				if (!OBJtoBGPriority
+					||
+					(OBJtoBGPriority && m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] == currentPalette[m_memory->read(0xFF47)&3].r))
+				{
+					uint8_t spriteLSB = m_memory->read(beginSpriteTileData + (spriteTile << 4) + (spriteOffsetY << 1));
+					uint8_t spriteMSB = m_memory->read(beginSpriteTileData + (spriteTile << 4) + (spriteOffsetY << 1) + 1);
+					uint8_t paletteIdx = (((spriteMSB & (1 << spriteOffsetX)) >> spriteOffsetX) << 1) | (((spriteLSB & (1 << spriteOffsetX)) >> spriteOffsetX));
+					uint8_t paletteColor = (paletteColors >> (paletteIdx * 2)) & 3;
+					if (paletteIdx != 0)
 					{
-						spriteOffsetX = 7 - spriteOffsetX;
+						m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = currentPalette[paletteColor].r;
+						m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = currentPalette[paletteColor].g;
+						m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = currentPalette[paletteColor].b;
+						m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
 					}
-					if ((spriteX + j) >= 0 && (spriteX + j) < 160)
-					{
-						if (!OBJtoBGPriority
-							||
-							(OBJtoBGPriority && m_frameTextureData[(m_currentLine * 160 + spriteX + j) * 4] == currentPalette[m_memory->read(0xFF47)&3].r))
-						{
-							uint8_t spriteLSB = m_memory->read(beginSpriteTileData + (spriteTile << 4) + (spriteOffsetY << 1));
-							uint8_t spriteMSB = m_memory->read(beginSpriteTileData + (spriteTile << 4) + (spriteOffsetY << 1) + 1);
-							uint8_t paletteIdx = (((spriteMSB & (1 << spriteOffsetX)) >> spriteOffsetX) << 1) | (((spriteLSB & (1 << spriteOffsetX)) >> spriteOffsetX));
-							uint8_t paletteColor = (paletteColors >> (paletteIdx * 2)) & 3;
-							if (paletteIdx != 0)
-							{
-								m_frameTextureData[(m_currentLine * 160 + spriteX + j) * 4] = currentPalette[paletteColor].r;
-								m_frameTextureData[(m_currentLine * 160 + spriteX + j) * 4 + 1] = currentPalette[paletteColor].g;
-								m_frameTextureData[(m_currentLine * 160 + spriteX + j) * 4 + 2] = currentPalette[paletteColor].b;
-								m_frameTextureData[(m_currentLine * 160 + spriteX + j) * 4 + 3] = 1;
-							}
-						}
-					}
+				}
+				else
+				{
+					m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = currentBGRed;
+					m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = currentBGGreen;
+					m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = currentBGBlue;
+					m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
 				}
 			}
 		}

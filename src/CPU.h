@@ -29,7 +29,8 @@ public:
     bool hasWrittenToDIVLastCycle() const { return m_hasWrittenToDIVLastCycle; }
 
 private:
-    void jumpToInterruptIfAnyPending();
+    bool areTherePendingInterrupts();
+    void jumpToPendingInterrupts();
 
     uint8_t getCarryFlagsFor8BitAddition(uint8_t op1, uint8_t op2);
     uint8_t getCarryFlagsFor8BitIncrement(uint8_t reg);

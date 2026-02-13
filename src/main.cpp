@@ -135,7 +135,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
                     {
                         IGFD::FileDialogConfig config;
                         config.path = ".";
-                        ImGuiFileDialog::Instance()->OpenDialog("OpenROMFileDialogKey", "Choose ROM File", ".gb", config);
+                        ImGuiFileDialog::Instance()->OpenDialog("OpenROMFileDialogKey", "Choose ROM File", ".gb, .gbc", config);
                     }
                     ImGui::EndMenu();
                 }
