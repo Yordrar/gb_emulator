@@ -50,8 +50,17 @@ public:
     void saveBatteryBackedRamToFile();
     void loadSavFileToRam();
 
+    enum class Mode
+    {
+        DMG, // Regular Game Boy
+        CGB  // Color Game Boy
+    };
+    static Mode s_currentMode;
+    static bool isCGBMode() { return s_currentMode == Mode::CGB; }
+
 private:
     void extractCartridgeInfo();
+    void switchToMode(Mode mode);
 
     bool m_hasOpenedRomFile = false;
 

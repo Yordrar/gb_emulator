@@ -10,9 +10,15 @@
 #include <vector>
 #endif
 
+#include "Emulator.h"
 #include "Memory.h"
 #include "Joypad.h"
 
+uint64_t CPU::s_frequencyHz = 4 * 1024 * 1024;
+
+#ifdef EMULATOR_DEBUG
+std::ofstream logFile;
+#endif
 CPU::CPU(Memory* memory, Joypad* joypad)
     : m_memory(memory)
     , m_joypad(joypad)
@@ -60,6 +66,15 @@ CPU::CPU(Memory* memory, Joypad* joypad)
     memory->write(0xFF4A, 0x00); // WY
     memory->write(0xFF4B, 0x00); // WX
     memory->write(0xFFFF, 0x00); // IE
+
+    if (Emulator::isCGBMode())
+    {
+        m_registers.A = 0x11;
+    }
+
+#ifdef EMULATOR_DEBUG
+    //logFile.open("log.txt", std::ofstream::out | std::ofstream::trunc);
+#endif
 }
 
 CPU::~CPU()
@@ -111,8 +126,8 @@ uint64_t CPU::executeInstruction()
     {
         opcode = m_memory->read(m_registers.PC++);
     }
-
-    //OutputDebugStringA(std::format("{:X} {:X}\n", m_registers.PC - 1, opcode).c_str());
+    //if (opcode == 0xFA && m_registers.PC - 1 == 0X4003) DebugBreak();
+    //logFile << std::format("{:X} {:X}\n", m_registers.PC - 1, opcode).c_str();
 
     uint16_t address = 0;
     uint8_t offset = 0;
@@ -854,10 +869,23 @@ uint64_t CPU::executeInstruction()
         break;
     case 0x10:
         // This is the STOP instruction which
-        // in this case behaves like a HALT
+        // in DMG mode behaves like a HALT
         // Technically not correct, but eh, should be fine
         // TODO maybe fix this in the future
-        m_registers.PC--;
+        if (!Emulator::isCGBMode())
+        {
+            m_registers.PC--;
+        }
+        else
+        {
+            // Check if speed switch
+            if (m_memory->read(0xFF4D) & 1)
+            {
+                s_frequencyHz = 8 * 1024 * 1024;
+                return 8200;
+            }
+        }
+        m_memory->write(0xFF04, 0);
         return 0;
         break;
     case 0xF3:

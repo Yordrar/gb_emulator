@@ -4,15 +4,21 @@
 
 #include <algorithm>
 
+#include "Emulator.h"
+#include "CPU.h"
+
 Memory::Memory(uint8_t* cartridge, size_t cartridgeSize)
     : m_cartridge(cartridge)
     , m_cartridgeSize(cartridgeSize)
 {
     std::memcpy(m_memory, m_cartridge, std::min(0x7FFF, static_cast<int>(m_cartridgeSize)));
 
-    for (uint16_t addr = 0xFF4C; addr <= 0xFF7F; ++addr)
+    if (!Emulator::isCGBMode)
     {
-        m_memory[addr] = 0xFF; // CGB-only I/O Reg
+        for (uint16_t addr = 0xFF4C; addr <= 0xFF7F; ++addr)
+        {
+            m_memory[addr] = 0xFF; // CGB-only I/O Reg
+        }
     }
 }
 
@@ -20,18 +26,18 @@ Memory::~Memory()
 {
 }
 
-void Memory::updateRTC(double deltaTimeSeconds)
+void Memory::updateRTC(uint64_t cyclesToEmulate)
 {
     if (((m_rtcUpperDayCounter >> 6) & 1) == 1)
     {
         return;
     }
 
-    m_rtcCounter += deltaTimeSeconds;
+    m_rtcCounter += ((double)cyclesToEmulate / (double)CPU::s_frequencyHz);
 
-    if (m_rtcCounter >= 1.0)
+    while (m_rtcCounter >= 1.0)
     {
-        m_rtcCounter = 0;
+        m_rtcCounter -= 1.0;
         m_rtcSeconds++;
         m_rtcSeconds &= 0x3F;
         if (m_rtcSeconds == 60)
@@ -80,7 +86,7 @@ uint8_t Memory::read(size_t address)
         address -= 0x2000;
     }
 
-    return m_memory[address];
+    return handleCommonMemoryRead(address);
 }
 
 void Memory::write(size_t address, uint8_t value)
@@ -129,12 +135,84 @@ void Memory::write(size_t address, uint8_t value)
         }
     }
 
-    if (address >= 0xFF4C && address <= 0xFF7F)
-    {
-        return;
-    }
+    handleCGBRegisterWrite(address, value);
 
     m_memory[address] = value;
+}
+
+uint8_t Memory::handleCommonMemoryRead(size_t address)
+{
+    if (address >= 0xFF4C && address <= 0xFF7F && !Emulator::isCGBMode())
+    {
+        return 0xFF;
+    }
+
+    if (address == 0xFF4D)
+    {
+        return CPU::s_frequencyHz == 8 * 1024 * 1024 ? 0x80 : 0;
+    }
+
+    if (address == 0xFF4F)
+    {
+        return 0xFE | (m_currentVramBank & 1);
+    }
+
+    if (address == 0xFF55)
+    {
+        return 0xFF;
+    }
+
+    return m_memory[address];
+}
+
+void Memory::handleCGBRegisterWrite(size_t address, uint8_t value)
+{
+    if (!Emulator::isCGBMode())
+        return;
+
+    if (address == 0xFF4D)
+    {
+        m_memory[address] = (value & 1);
+    }
+
+    if (address == 0xFF4F)
+    {
+        m_currentVramBank = (value & 1);
+    }
+
+    if (address == 0xFF51 || address == 0xFF52)
+    {
+        m_memory[address] = value;
+        m_memory[0xFF52] &= 0xF0;
+    }
+
+    if (address == 0xFF53 || address == 0xFF54)
+    {
+        m_memory[address] = value;
+        m_memory[0xFF53] &= 0x10;
+        m_memory[0xFF54] &= 0x10;
+    }
+
+    if (address == 0xFF55)
+    {
+        uint16_t sourceAddress = ((uint16_t)m_memory[0xFF51] << 8) | m_memory[0xFF52];
+        uint16_t destAddress = (((uint16_t)m_memory[0xFF53] << 8) | m_memory[0xFF54]) | 0x8000;
+        size_t transferLen = ((value & 0x7F) + 1) * 0x10;
+        size_t transferMode = (value & 0x80) >> 7;
+
+        for (uint16_t addr = sourceAddress; addr < (sourceAddress + transferLen); ++addr)
+        {
+            m_memory[destAddress] = m_memory[sourceAddress];
+        }
+    }
+
+    if (address == 0xFF70)
+    {
+        m_currentWramBank = (value & 0x7);
+        if (m_currentWramBank == 0)
+            m_currentWramBank++;
+    }
+
 }
 
 MBC1::MBC1(uint8_t* cartridge, size_t cartridgeSize)
@@ -187,7 +265,7 @@ uint8_t MBC1::read(size_t address)
         address -= 0x2000;
     }
 
-    return m_memory[address];
+    return handleCommonMemoryRead(address);
 }
 
 void MBC1::write(size_t address, uint8_t value)
@@ -263,10 +341,7 @@ void MBC1::write(size_t address, uint8_t value)
         }
     }
 
-    if (address >= 0xFF4C && address <= 0xFF7F)
-    {
-        return;
-    }
+    handleCGBRegisterWrite(address, value);
 
     m_memory[address] = value;
 }
@@ -314,7 +389,7 @@ uint8_t MBC2::read(size_t address)
         address -= 0x2000;
     }
 
-    return m_memory[address];
+    return handleCommonMemoryRead(address);
 }
 
 void MBC2::write(size_t address, uint8_t value)
@@ -382,10 +457,7 @@ void MBC2::write(size_t address, uint8_t value)
         }
     }
 
-    if (address >= 0xFF4C && address <= 0xFF7F)
-    {
-        return;
-    }
+    handleCGBRegisterWrite(address, value);
 
     m_memory[address] = (value & 0x0F);
 }
@@ -426,7 +498,7 @@ uint8_t MBC3::read(size_t address)
     {
         if (!m_enableRam)
         {
-            return 0;
+            return 0xFF;
         }
 
         switch (m_currentRamBank)
@@ -485,7 +557,7 @@ uint8_t MBC3::read(size_t address)
         address -= 0x2000;
     }
 
-    return m_memory[address];
+    return handleCommonMemoryRead(address);
 }
 
 void MBC3::write(size_t address, uint8_t value)
@@ -556,13 +628,13 @@ void MBC3::write(size_t address, uint8_t value)
             m_ramBank3[(address - 0xA000)] = value;
             break;
         case 0x08:
-            m_rtcSeconds = value & 0x3F;
+            m_rtcSeconds = value & 0x3B;
             break;
         case 0x09:
-            m_rtcMinutes = value & 0x3F;
+            m_rtcMinutes = value & 0x3B;
             break;
         case 0x0A:
-            m_rtcHours = value & 0x1F;
+            m_rtcHours = value & 0x17;
             break;
         case 0x0B:
             m_rtcLowerDayCounter = value;
@@ -598,7 +670,7 @@ void MBC3::write(size_t address, uint8_t value)
                 m_memory[address] = 0;
             }
         }
-        m_memory[0xFF26] = (m_memory[0xFF26] & 0x0F) | value;
+        m_memory[0xFF26] = (m_memory[0xFF26] & 0x0F) | (value & 0x80);
         return;
     }
 
@@ -612,10 +684,7 @@ void MBC3::write(size_t address, uint8_t value)
         }
     }
 
-    if (address >= 0xFF4C && address <= 0xFF7F)
-    {
-        return;
-    }
+    handleCGBRegisterWrite(address, value);
 
     m_memory[address] = value;
 }
@@ -669,7 +738,7 @@ uint8_t MBC5::read(size_t address)
         address -= 0x2000;
     }
 
-    return m_memory[address];
+    return handleCommonMemoryRead(address);
 }
 
 void MBC5::write(size_t address, uint8_t value)
@@ -752,10 +821,7 @@ void MBC5::write(size_t address, uint8_t value)
         }
     }
 
-    if (address >= 0xFF4C && address <= 0xFF7F)
-    {
-        return;
-    }
+    handleCGBRegisterWrite(address, value);
 
     m_memory[address] = value;
 }

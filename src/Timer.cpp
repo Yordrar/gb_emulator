@@ -60,7 +60,7 @@ void Timer::update(uint64_t cyclesToEmulate)
         {
             m_div = 0;
         }
-        else if ((m_timerClock % (CPU::FrequencyHz / 16384)) == 0)
+        else if ((m_timerClock % (CPU::s_frequencyHz / 16384)) == 0)
         {
             m_div++;
         }
@@ -71,7 +71,7 @@ void Timer::update(uint64_t cyclesToEmulate)
             // TIMA
             uint8_t inputClockSelect = (m_tac & 0x3);
             uint64_t clockFrequency = clockFrequenciesHz[inputClockSelect];
-            if (m_timerClock % static_cast<uint16_t>(CPU::FrequencyHz / clockFrequency) == 0)
+            if (m_timerClock % static_cast<uint16_t>(CPU::s_frequencyHz / clockFrequency) == 0)
             {
                 m_tima++;
             }

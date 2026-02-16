@@ -13,6 +13,8 @@
 #include "Joypad.h"
 #include "Sound.h"
 
+Emulator::Mode Emulator::s_currentMode = Mode::DMG;
+
 std::chrono::steady_clock::time_point start;
 std::chrono::steady_clock::time_point end;
 Emulator::Emulator(ResourceHandle frameTexture, uint8_t* frameTextureData)
@@ -29,6 +31,8 @@ Emulator::~Emulator()
 
 void Emulator::openRomFile(char const* romFilename)
 {
+    switchToMode(Mode::DMG);
+
     std::string filepath(romFilename);
     if (filepath.starts_with('\"'))
     {
@@ -57,6 +61,11 @@ void Emulator::openRomFile(char const* romFilename)
     file.read(reinterpret_cast<char*>(m_cartridge.get()), m_cartridgeSize);
 
     extractCartridgeInfo();
+
+    /*if ((m_cartridge[0x143] & 0x80) == 0x80)
+    {
+        switchToMode(Mode::CGB);
+    }*/
 
     if (m_cartridgeInfo.hasMBC1())
     {
@@ -104,12 +113,11 @@ void Emulator::emulate()
 
     saveTimer += deltaTimeSeconds;
 
-    m_memory->updateRTC(deltaTimeSeconds);
-
     uint64_t executedCycles = m_cpu->executeInstruction();
-    m_sound->update(executedCycles);
+    m_memory->updateRTC(executedCycles);
     m_timer->update(executedCycles);
     m_lcd->update(executedCycles);
+    m_sound->update(executedCycles);
 
     if (saveTimer >= 1.0)
     {
@@ -212,6 +220,11 @@ void Emulator::extractCartridgeInfo()
         .m_ramSize = ramSize,
         .m_numRamBanks = numRamBanks,
     };   
+}
+
+void Emulator::switchToMode(Mode mode)
+{
+    s_currentMode = mode;
 }
 
 std::string Emulator::CartridgeInfo::getCartridgeTypeStr() const

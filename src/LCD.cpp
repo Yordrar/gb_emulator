@@ -1,5 +1,6 @@
 #include "LCD.h"
 
+#include "Emulator.h"
 #include "CPU.h"
 #include "Memory.h"
 
@@ -272,8 +273,15 @@ void LCD::writeScanlineToFrame()
 		// Drawing priority
 		std::sort(spritesToDraw.begin(), spritesToDraw.end(), [](Sprite const& a, Sprite const& b)
 			{
-				if (a.spriteX < b.spriteX) return true;
-				if (a.spriteX == b.spriteX && a.locationInOAM < b.locationInOAM) return true;
+				if (!Emulator::isCGBMode())
+				{
+					if (a.spriteX < b.spriteX) return true;
+					if (a.spriteX == b.spriteX && a.locationInOAM < b.locationInOAM) return true;
+				}
+				else
+				{
+					if (a.locationInOAM < b.locationInOAM) return true;
+				}
 				return false;
 			});
 		for (int rowPixel = 0; rowPixel < 160; ++rowPixel)

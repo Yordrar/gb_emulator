@@ -87,7 +87,7 @@ void Sound::update(uint64_t cyclesToEmulate)
         updateFrequencyTimerChannel3();
         updateFrequencyTimerChannel4();
 
-        if ((m_sampleClock % (CPU::FrequencyHz / Sound::sc_SampleRate)) == 0)
+        if ((m_sampleClock % (CPU::s_frequencyHz / Sound::sc_SampleRate)) == 0)
         {
             if (soundEnable)
             {
@@ -124,7 +124,7 @@ void Sound::update(uint64_t cyclesToEmulate)
             }
             if (m_audioDataBufferSampleCount >= sc_AudioDataBufferSize)
             {
-                while (SDL_GetQueuedAudioSize(m_audioDevice) > (sc_AudioDataBufferSize * sizeof(float) * 2))
+                while (SDL_GetQueuedAudioSize(m_audioDevice) > (sc_AudioDataBufferSize * sizeof(float)))
                 {
                     Sleep(1);
                 }

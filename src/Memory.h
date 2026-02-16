@@ -26,7 +26,7 @@ public:
     Memory(uint8_t* cartridge, size_t cartridgeSize);
     ~Memory();
 
-    void updateRTC(double deltaTimeSeconds);
+    void updateRTC(uint64_t cyclesToEmulate);
 
     virtual uint8_t read(size_t address);
     virtual void write(size_t address, uint8_t value);
@@ -36,6 +36,9 @@ public:
     virtual void loadRamBanksFromFile(std::ifstream& file) {};
 
 protected:
+    uint8_t handleCommonMemoryRead(size_t address);
+    void handleCGBRegisterWrite(size_t address, uint8_t value);
+
     uint8_t* m_cartridge;
     size_t m_cartridgeSize;
 
@@ -59,6 +62,14 @@ protected:
     uint8_t m_latchedRtcHours = 0;
     uint8_t m_latchedRtcLowerDayCounter = 0;
     uint8_t m_latchedRtcUpperDayCounter = 0;
+
+    // CGB
+    uint8_t m_currentVramBank = 0;
+    uint8_t m_vramBank0[0x2000] = {};
+    uint8_t m_vramBank1[0x2000] = {};
+
+    uint8_t m_currentWramBank = 1;
+    uint8_t m_vramBanks[8 * 0x1000] = {};
 };
 
 class MBC1 : public Memory
