@@ -24,6 +24,9 @@ private:
     ResourceHandle m_frameTexture;
     uint8_t* m_frameTextureData;
 
+    uint8_t m_priorityMap[160 * 144] = {};
+    uint8_t m_BGColorIndex[160 * 144] = {};
+
     double m_timerCounter;
     int m_currentLine;
 };

@@ -62,10 +62,11 @@ void Emulator::openRomFile(char const* romFilename)
 
     extractCartridgeInfo();
 
-    /*if ((m_cartridge[0x143] & 0x80) == 0x80)
+    if ((m_cartridge[0x143] & 0x80) == 0x80)
     {
         switchToMode(Mode::CGB);
-    }*/
+    }
+    //switchToMode(Mode::DMG);
 
     if (m_cartridgeInfo.hasMBC1())
     {

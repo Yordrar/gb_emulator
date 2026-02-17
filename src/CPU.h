@@ -20,6 +20,8 @@ public:
         JoyPad,
     };
 
+    static const uint64_t s_DMGfrequencyHz = 4 * 1024 * 1024;
+    static const uint64_t s_CGBfrequencyHz = 8 * 1024 * 1024;
     static uint64_t s_frequencyHz;
 
     void requestInterrupt(Interrupt interrupt);

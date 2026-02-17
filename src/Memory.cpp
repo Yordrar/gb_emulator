@@ -13,13 +13,19 @@ Memory::Memory(uint8_t* cartridge, size_t cartridgeSize)
 {
     std::memcpy(m_memory, m_cartridge, std::min(0x7FFF, static_cast<int>(m_cartridgeSize)));
 
-    if (!Emulator::isCGBMode)
+    if (!Emulator::isCGBMode())
     {
         for (uint16_t addr = 0xFF4C; addr <= 0xFF7F; ++addr)
         {
             m_memory[addr] = 0xFF; // CGB-only I/O Reg
         }
     }
+
+    for (uint16_t i = 0; i < 32; ++i)
+    {
+        m_BGColorPaletteRam[i] = 0xFF; // CGB BG colors are initialized as white
+    }
+    m_OBJColorPaletteRam[0] = 0;
 }
 
 Memory::~Memory()
@@ -91,16 +97,96 @@ uint8_t Memory::read(size_t address)
 
 void Memory::write(size_t address, uint8_t value)
 {
-    // ROM bank number
-    if (address >= 0x2000 && address <= 0x3FFF)
+    handleCGBRegisterWrite(address, value);
+    handleCommonMemoryWrite(address, value);
+
+    m_memory[address] = value;
+}
+
+uint8_t Memory::readFromVramBank(size_t address, uint8_t bank)
+{
+    return m_vramBanks[(bank * 0x2000) + (address - 0x8000)];
+}
+
+void Memory::performHBlankDMATransfer()
+{
+    if (Emulator::isCGBMode() && m_hblankDMAInProgress && m_numBytesToCopyForDMATransfer > 0)
     {
-        uint8_t selectedRomBank = (value & 0x7F);
-        if (selectedRomBank == 0)
+        uint16_t numBytes = std::min((int)m_numBytesToCopyForDMATransfer, 0x10);
+        for (uint16_t i = 0; i < numBytes; ++i)
         {
-            selectedRomBank++;
+            write(m_hblankDMADestAddress + i, read(m_hblankDMASourceAddress + i));
         }
-        m_currentRomBank = selectedRomBank;
-        return;
+        m_hblankDMASourceAddress += numBytes;
+        m_hblankDMADestAddress += numBytes;
+        m_numBytesToCopyForDMATransfer -= numBytes;
+    }
+}
+
+uint8_t Memory::handleCommonMemoryRead(size_t address)
+{
+    if (address >= 0x8000 && address <= 0x9FFF)
+    {
+        return m_vramBanks[(m_currentVramBank * 0x2000) + (address - 0x8000)];
+    }
+
+    if (address >= 0xD000 && address <= 0xDFFF)
+    {
+        return m_wramBanks[(m_currentWramBank * 0x1000) + (address - 0xD000)];
+    }
+
+    if (address >= 0xFF4C && address <= 0xFF7F && !Emulator::isCGBMode())
+    {
+        return 0xFF;
+    }
+
+    if (address == 0xFF4D)
+    {
+        return CPU::s_frequencyHz == CPU::s_CGBfrequencyHz ? 0x80 : 0;
+    }
+
+    if (address == 0xFF4F)
+    {
+        return 0xFE | (m_currentVramBank & 1);
+    }
+
+    if (address == 0xFF55)
+    {
+        uint8_t status = 0;
+        status = (m_numBytesToCopyForDMATransfer / 16) - 1;
+        if (m_numBytesToCopyForDMATransfer < 16) status = 0;
+        status |= m_hblankDMAInProgress ? 0x00 : 0x80;
+        if (m_numBytesToCopyForDMATransfer == 0) status = 0xFF;
+        return status;
+    }
+
+    if (address == 0xFF69)
+    {
+        uint8_t addr = m_memory[0xFF68] & 0x3F;
+        return ((uint8_t*)m_BGColorPaletteRam)[addr];
+    }
+
+    if (address == 0xFF6B)
+    {
+        uint8_t addr = m_memory[0xFF6A] & 0x3F;
+        return ((uint8_t*)m_OBJColorPaletteRam)[addr];
+    }
+
+    return m_memory[address];
+}
+
+void Memory::handleCommonMemoryWrite(size_t address, uint8_t value)
+{
+    // Writing to VRAM
+    if (address >= 0x8000 && address <= 0x9FFF)
+    {
+        m_vramBanks[(m_currentVramBank * 0x2000) + (address - 0x8000)] = value;
+    }
+
+    // Writing to WRAM bank
+    if (address >= 0xD000 && address <= 0xDFFF)
+    {
+        m_wramBanks[(m_currentWramBank * 0x1000) + (address - 0xD000)] = value;
     }
 
     // Writing to Echo RAM
@@ -134,35 +220,6 @@ void Memory::write(size_t address, uint8_t value)
             write(0xFE00 | i, read(sourceAddress | i));
         }
     }
-
-    handleCGBRegisterWrite(address, value);
-
-    m_memory[address] = value;
-}
-
-uint8_t Memory::handleCommonMemoryRead(size_t address)
-{
-    if (address >= 0xFF4C && address <= 0xFF7F && !Emulator::isCGBMode())
-    {
-        return 0xFF;
-    }
-
-    if (address == 0xFF4D)
-    {
-        return CPU::s_frequencyHz == 8 * 1024 * 1024 ? 0x80 : 0;
-    }
-
-    if (address == 0xFF4F)
-    {
-        return 0xFE | (m_currentVramBank & 1);
-    }
-
-    if (address == 0xFF55)
-    {
-        return 0xFF;
-    }
-
-    return m_memory[address];
 }
 
 void Memory::handleCGBRegisterWrite(size_t address, uint8_t value)
@@ -189,20 +246,55 @@ void Memory::handleCGBRegisterWrite(size_t address, uint8_t value)
     if (address == 0xFF53 || address == 0xFF54)
     {
         m_memory[address] = value;
-        m_memory[0xFF53] &= 0x10;
-        m_memory[0xFF54] &= 0x10;
+        m_memory[0xFF54] &= 0xF0;
     }
 
     if (address == 0xFF55)
     {
-        uint16_t sourceAddress = ((uint16_t)m_memory[0xFF51] << 8) | m_memory[0xFF52];
-        uint16_t destAddress = (((uint16_t)m_memory[0xFF53] << 8) | m_memory[0xFF54]) | 0x8000;
-        size_t transferLen = ((value & 0x7F) + 1) * 0x10;
-        size_t transferMode = (value & 0x80) >> 7;
+        uint16_t sourceAddress = (((uint16_t)m_memory[0xFF51] << 8) | m_memory[0xFF52]);
+        uint16_t destAddress = 0x8000 + (((uint16_t)m_memory[0xFF53] << 8) | m_memory[0xFF54]);
+        uint16_t transferLen = (uint32_t(value & 0x7F) + 1) * 0x10;
+        uint16_t transferMode = (value & 0x80) >> 7;
 
-        for (uint16_t addr = sourceAddress; addr < (sourceAddress + transferLen); ++addr)
+        if (!m_hblankDMAInProgress && transferMode == 0)
         {
-            m_memory[destAddress] = m_memory[sourceAddress];
+            for (uint16_t i = 0; i < transferLen; ++i)
+            {
+                write(destAddress + i, read(sourceAddress + i));
+            }
+            m_numBytesToCopyForDMATransfer = 0;
+        }
+        else if(m_hblankDMAInProgress && transferMode == 0)
+        {
+            m_hblankDMAInProgress = false;
+        }
+        else
+        {
+            m_hblankDMAInProgress = true;
+            m_hblankDMASourceAddress = sourceAddress;
+            m_hblankDMADestAddress = destAddress;
+            m_numBytesToCopyForDMATransfer = transferLen;
+        }
+    }
+
+    if (address == 0xFF69)
+    {
+        uint8_t addr = m_memory[0xFF68] & 0x3F;
+        ((uint8_t*)m_BGColorPaletteRam)[addr] = value;
+        if (m_memory[0xFF68] & 0x80)
+        {
+            m_memory[0xFF68]++;
+        }
+    }
+
+    if (address == 0xFF6B)
+    {
+        uint8_t addr = m_memory[0xFF6A] & 0x3F;
+        ((uint8_t*)m_OBJColorPaletteRam)[addr] = value;
+        m_OBJColorPaletteRam[0] = 0;
+        if (m_memory[0xFF6A] & 0x80)
+        {
+            m_memory[0xFF6A]++;
         }
     }
 
@@ -309,39 +401,8 @@ void MBC1::write(size_t address, uint8_t value)
         return;
     }
 
-    // Writing to Echo RAM
-    if (address >= 0xE000 && address <= 0xFDFF)
-    {
-        address -= 0x2000;
-    }
-
-    //Enable/Disable APU
-    if (address == 0xFF26)
-    {
-        bool newEnabled = (value >> 7) != 0;
-        bool wasEnabled = (m_memory[0xFF26] >> 7) != 0;
-        if (!newEnabled && wasEnabled)
-        {
-            for (uint16_t address = 0xFF10; address <= 0xFF25; address++)
-            {
-                m_memory[address] = 0;
-            }
-        }
-        m_memory[0xFF26] = (m_memory[0xFF26] & 0x0F) | value;
-        return;
-    }
-
-    // OAM DMA transfer
-    if (address == 0xFF46)
-    {
-        uint16_t sourceAddress = (uint16_t(std::clamp(static_cast<unsigned int>(value), 0u, 0xF1u)) << 8);
-        for (int i = 0; i <= 0x9F; i++)
-        {
-            write(0xFE00 | i, read(sourceAddress | i));
-        }
-    }
-
     handleCGBRegisterWrite(address, value);
+    handleCommonMemoryWrite(address, value);
 
     m_memory[address] = value;
 }
@@ -425,39 +486,8 @@ void MBC2::write(size_t address, uint8_t value)
         return;
     }
 
-    // Writing to Echo RAM
-    if (address >= 0xE000 && address <= 0xFDFF)
-    {
-        address -= 0x2000;
-    }
-
-    //Enable/Disable APU
-    if (address == 0xFF26)
-    {
-        bool newEnabled = (value >> 7) != 0;
-        bool wasEnabled = (m_memory[0xFF26] >> 7) != 0;
-        if (!newEnabled && wasEnabled)
-        {
-            for (uint16_t address = 0xFF10; address <= 0xFF25; address++)
-            {
-                m_memory[address] = 0;
-            }
-        }
-        m_memory[0xFF26] = (m_memory[0xFF26] & 0x0F) | value;
-        return;
-    }
-
-    // OAM DMA transfer
-    if (address == 0xFF46)
-    {
-        uint16_t sourceAddress = (uint16_t(std::clamp(static_cast<unsigned int>(value), 0u, 0xF1u)) << 8);
-        for (int i = 0; i <= 0x9F; i++)
-        {
-            write(0xFE00 | i, read(sourceAddress | i));
-        }
-    }
-
     handleCGBRegisterWrite(address, value);
+    handleCommonMemoryWrite(address, value);
 
     m_memory[address] = (value & 0x0F);
 }
@@ -628,13 +658,13 @@ void MBC3::write(size_t address, uint8_t value)
             m_ramBank3[(address - 0xA000)] = value;
             break;
         case 0x08:
-            m_rtcSeconds = value & 0x3B;
+            m_rtcSeconds = value & 0x3F;
             break;
         case 0x09:
-            m_rtcMinutes = value & 0x3B;
+            m_rtcMinutes = value & 0x3F;
             break;
         case 0x0A:
-            m_rtcHours = value & 0x17;
+            m_rtcHours = value & 0x1F;
             break;
         case 0x0B:
             m_rtcLowerDayCounter = value;
@@ -652,39 +682,8 @@ void MBC3::write(size_t address, uint8_t value)
         return;
     }
 
-    // Writing to Echo RAM
-    if (address >= 0xE000 && address <= 0xFDFF)
-    {
-        address -= 0x2000;
-    }
-
-    //Enable/Disable APU
-    if (address == 0xFF26)
-    {
-        bool newEnabled = (value >> 7) != 0;
-        bool wasEnabled = (m_memory[0xFF26] >> 7) != 0;
-        if (!newEnabled && wasEnabled)
-        {
-            for (uint16_t address = 0xFF10; address <= 0xFF25; address++)
-            {
-                m_memory[address] = 0;
-            }
-        }
-        m_memory[0xFF26] = (m_memory[0xFF26] & 0x0F) | (value & 0x80);
-        return;
-    }
-
-    // OAM DMA transfer
-    if (address == 0xFF46)
-    {
-        uint16_t sourceAddress = (uint16_t(std::clamp(static_cast<unsigned int>(value), 0u, 0xF1u)) << 8);
-        for (int i = 0; i <= 0x9F; i++)
-        {
-            write(0xFE00 | i, read(sourceAddress | i));
-        }
-    }
-
     handleCGBRegisterWrite(address, value);
+    handleCommonMemoryWrite(address, value);
 
     m_memory[address] = value;
 }
@@ -789,39 +788,8 @@ void MBC5::write(size_t address, uint8_t value)
         return;
     }
 
-    // Writing to Echo RAM
-    if (address >= 0xE000 && address <= 0xFDFF)
-    {
-        address -= 0x2000;
-    }
-
-    //Enable/Disable APU
-    if (address == 0xFF26)
-    {
-        bool newEnabled = (value >> 7) != 0;
-        bool wasEnabled = (m_memory[0xFF26] >> 7) != 0;
-        if (!newEnabled && wasEnabled)
-        {
-            for (uint16_t address = 0xFF10; address <= 0xFF25; address++)
-            {
-                m_memory[address] = 0;
-            }
-        }
-        m_memory[0xFF26] = (m_memory[0xFF26] & 0x0F) | value;
-        return;
-    }
-
-    // OAM DMA transfer
-    if (address == 0xFF46)
-    {
-        uint16_t sourceAddress = (uint16_t(std::clamp(static_cast<unsigned int>(value), 0u, 0xF1u)) << 8);
-        for (int i = 0; i <= 0x9F; i++)
-        {
-            write(0xFE00 | i, read(sourceAddress | i));
-        }
-    }
-
     handleCGBRegisterWrite(address, value);
+    handleCommonMemoryWrite(address, value);
 
     m_memory[address] = value;
 }

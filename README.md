@@ -1,6 +1,6 @@
 # GB Emulator
 
-This is a small GameBoy emulator I made as a side project to get into the world of emulation.
+This is a small GameBoy/GameBoy Color emulator I made as a side project to get into the world of emulation.
 
 Although it doesn't implement some quirks or bugs found in real hardware, it is a complete emulator capable of running some of the most
 complex ROMs. I decided not to make it more accurate to keep the scope small, as I intended this to be a quick side project.
@@ -12,7 +12,7 @@ It features keyboard and Xbox controller support through Xinput, and memory bank
 To open a ROM file, use the menu bar at the top to open the file dialog and choose a valid rom.
 You can also either drag it to the built exe file or pass the path as the first parameter in the command line, like
 ```
-> gb_emulator.exe MyRom.gb
+> gb_emulator.exe MyRom.[gb/gbc]
 ```
 You can use either the keyboard or an xbox controller as input.
 Keyboard controls:

@@ -35,8 +35,14 @@ public:
     virtual void saveRamBanksToFile(std::ofstream& file) {};
     virtual void loadRamBanksFromFile(std::ifstream& file) {};
 
+    uint8_t readFromVramBank(size_t address, uint8_t bank);
+    void performHBlankDMATransfer();
+
 protected:
+    friend class LCD;
+
     uint8_t handleCommonMemoryRead(size_t address);
+    void handleCommonMemoryWrite(size_t address, uint8_t value);
     void handleCGBRegisterWrite(size_t address, uint8_t value);
 
     uint8_t* m_cartridge;
@@ -65,11 +71,18 @@ protected:
 
     // CGB
     uint8_t m_currentVramBank = 0;
-    uint8_t m_vramBank0[0x2000] = {};
-    uint8_t m_vramBank1[0x2000] = {};
+    uint8_t m_vramBanks[2 * 0x2000] = {};
+
+    bool m_hblankDMAInProgress = false;
+    uint16_t m_hblankDMASourceAddress = 0;
+    uint16_t m_hblankDMADestAddress = 0;
+    uint16_t m_numBytesToCopyForDMATransfer = 0;
 
     uint8_t m_currentWramBank = 1;
-    uint8_t m_vramBanks[8 * 0x1000] = {};
+    uint8_t m_wramBanks[8 * 0x1000] = {};
+
+    uint16_t m_BGColorPaletteRam[32] = {};
+    uint16_t m_OBJColorPaletteRam[32] = {};
 };
 
 class MBC1 : public Memory
