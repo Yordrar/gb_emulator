@@ -225,20 +225,21 @@ void LCD::writeScanlineToFrame()
 				beginTileMap = beginWindowTileMap;
 				tileMapX = ((j - WX) / 8) % 32;
 				tileMapY = (m_currentLine - WY) / 8;
+				tileMapOffset = (tileMapY * 32) + tileMapX;
 				tileOffsetX = 7 - ((j - WX) % 8);
 				tileOffsetY = (m_currentLine - WY) % 8;
-				tileMapOffset = (tileMapY * 32) + tileMapX;
 			}
 			else
 			{
 				beginTileMap = beginBGTileMap;
 				tileMapX = ((bgmX + j) / 8) % 32;
-				tileOffsetX = 7 - ((bgmX + j) % 8);
 				tileMapOffset = (tileMapY * 32) + tileMapX;
+				tileOffsetX = 7 - ((bgmX + j) % 8);
+				tileOffsetY = bgmY % 8;
 			}
 
 			// CGB BG Map Attributes
-			uint8_t attr = m_memory->readFromVramBank(beginTileMap + tileMapOffset, 1);
+			uint8_t attr = Emulator::isCGBMode() ? m_memory->readFromVramBank(beginTileMap + tileMapOffset, 1) : 0;
 			uint8_t priority = (attr >> 7);
 			uint8_t yFlip = (attr >> 6) & 1;
 			uint8_t xFlip = (attr >> 5) & 1;
@@ -259,7 +260,7 @@ void LCD::writeScanlineToFrame()
 			uint16_t tileIdx = 0;
 			if (!BGWindowTileDataSelect)
 			{
-				uint8_t signedTileIdx = m_memory->read(beginTileMap + tileMapOffset);
+				uint8_t signedTileIdx = m_memory->readFromVramBank(beginTileMap + tileMapOffset, 0);
 				if (signedTileIdx & 0x80)
 				{
 					tileIdx = signedTileIdx - 0x80;
@@ -271,7 +272,7 @@ void LCD::writeScanlineToFrame()
 			}
 			else
 			{
-				tileIdx = m_memory->read(beginTileMap + tileMapOffset);
+				tileIdx = m_memory->readFromVramBank(beginTileMap + tileMapOffset, 0);
 			}
 
 			uint8_t tileLSB = m_memory->readFromVramBank(beginBGWindowTileData + (tileIdx << 4) + (tileOffsetY << 1), bank);

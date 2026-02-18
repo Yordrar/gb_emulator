@@ -132,7 +132,14 @@ uint8_t Memory::handleCommonMemoryRead(size_t address)
 
     if (address >= 0xD000 && address <= 0xDFFF)
     {
-        return m_wramBanks[(m_currentWramBank * 0x1000) + (address - 0xD000)];
+        if (m_currentWramBank == 0)
+        {
+            return m_memory[address - 0x1000];
+        }
+        else
+        {
+            return m_wramBanks[(m_currentWramBank * 0x1000) + (address - 0xD000)];
+        }
     }
 
     if (address >= 0xFF4C && address <= 0xFF7F && !Emulator::isCGBMode())
@@ -172,6 +179,11 @@ uint8_t Memory::handleCommonMemoryRead(size_t address)
         return ((uint8_t*)m_OBJColorPaletteRam)[addr];
     }
 
+    if (address == 0xFF70)
+    {
+        return 0xF8 | (m_currentWramBank & 0x7);
+    }
+
     return m_memory[address];
 }
 
@@ -186,7 +198,14 @@ void Memory::handleCommonMemoryWrite(size_t address, uint8_t value)
     // Writing to WRAM bank
     if (address >= 0xD000 && address <= 0xDFFF)
     {
-        m_wramBanks[(m_currentWramBank * 0x1000) + (address - 0xD000)] = value;
+        if (m_currentWramBank == 0)
+        {
+            m_memory[address - 0x1000] = value;
+        }
+        else
+        {
+            m_wramBanks[(m_currentWramBank * 0x1000) + (address - 0xD000)] = value;
+        }
     }
 
     // Writing to Echo RAM
@@ -240,19 +259,17 @@ void Memory::handleCGBRegisterWrite(size_t address, uint8_t value)
     if (address == 0xFF51 || address == 0xFF52)
     {
         m_memory[address] = value;
-        m_memory[0xFF52] &= 0xF0;
     }
 
     if (address == 0xFF53 || address == 0xFF54)
     {
         m_memory[address] = value;
-        m_memory[0xFF54] &= 0xF0;
     }
 
     if (address == 0xFF55)
     {
-        uint16_t sourceAddress = (((uint16_t)m_memory[0xFF51] << 8) | m_memory[0xFF52]);
-        uint16_t destAddress = 0x8000 + (((uint16_t)m_memory[0xFF53] << 8) | m_memory[0xFF54]);
+        uint16_t sourceAddress = ((((uint16_t)m_memory[0xFF51] << 8) | m_memory[0xFF52]) & 0xFFF0);
+        uint16_t destAddress = 0x8000 + ((((uint16_t)m_memory[0xFF53] << 8) | m_memory[0xFF54]) & 0x1FF0);
         uint16_t transferLen = (uint32_t(value & 0x7F) + 1) * 0x10;
         uint16_t transferMode = (value & 0x80) >> 7;
 
@@ -746,11 +763,11 @@ void MBC5::write(size_t address, uint8_t value)
     {
         if ((value & 0x0F) == 0x0A)
         {
-            // TODO enable RAM
+            m_enableRam = true;
         }
         else
         {
-            // TODO disable RAM
+            m_enableRam = false;
         }
         return;
     }
@@ -779,7 +796,7 @@ void MBC5::write(size_t address, uint8_t value)
     }
 
     // Writing to RAM bank
-    if (address >= 0xA000 && address <= 0xBFFF)
+    if (address >= 0xA000 && address <= 0xBFFF && m_enableRam)
     {
         m_ramBanks[(m_currentRamBank * 0x2000) + (address - 0xA000)] = value;
 
