@@ -26,7 +26,7 @@ public:
     Memory(uint8_t* cartridge, size_t cartridgeSize);
     ~Memory();
 
-    void updateRTC(uint64_t cyclesToEmulate);
+    void updateRTC(double deltaTimeSeconds);
 
     virtual uint8_t read(size_t address);
     virtual void write(size_t address, uint8_t value);

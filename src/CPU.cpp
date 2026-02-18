@@ -14,7 +14,7 @@
 #include "Memory.h"
 #include "Joypad.h"
 
-uint64_t CPU::s_frequencyHz = s_DMGfrequencyHz;
+uint64_t CPU::s_frequencyHz = s_normalSpeedFrequencyHz;
 
 #ifdef EMULATOR_DEBUG
 std::ofstream logFile;
@@ -881,7 +881,8 @@ uint64_t CPU::executeInstruction()
             // Check if speed switch
             if (m_memory->read(0xFF4D) & 1)
             {
-                s_frequencyHz = s_frequencyHz == CPU::s_DMGfrequencyHz ? CPU::s_CGBfrequencyHz : CPU::s_DMGfrequencyHz;
+                s_frequencyHz = isDoubleSpeedMode() ? CPU::s_normalSpeedFrequencyHz : CPU::s_doubleSpeedFrequencyHz;
+                m_memory->write(0xFF4D, 0);
                 return 8200;
             }
         }

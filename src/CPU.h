@@ -20,9 +20,10 @@ public:
         JoyPad,
     };
 
-    static const uint64_t s_DMGfrequencyHz = 4 * 1024 * 1024;
-    static const uint64_t s_CGBfrequencyHz = 8 * 1024 * 1024;
+    static const uint64_t s_normalSpeedFrequencyHz = 4 * 1024 * 1024;
+    static const uint64_t s_doubleSpeedFrequencyHz = 8 * 1024 * 1024;
     static uint64_t s_frequencyHz;
+    static bool isDoubleSpeedMode() { return s_frequencyHz == s_doubleSpeedFrequencyHz; }
 
     void requestInterrupt(Interrupt interrupt);
     uint64_t executeInstruction();

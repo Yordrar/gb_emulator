@@ -7,6 +7,15 @@
 #include <vector>
 #include <algorithm>
 
+static const LCD::RGB originalGBPalette[4] = { {0x9B, 0xBC, 0x0F}, {0x8B, 0xAC, 0x0F}, {0x30, 0x62, 0x30}, {0x0F, 0x38, 0x0F} };
+static const LCD::RGB lospecPalette[4] = { {0xC7, 0xC6, 0xC6}, {0x7C, 0x6D, 0x80}, {0x38, 0x28, 0x43}, {0x00, 0x00, 0x00} };
+static const LCD::RGB greyscalePalette[4] = { {255, 255, 255}, {168, 168, 168}, {84, 84, 84}, {0, 0, 0} };
+
+static const LCD::RGB* sc_currentPalette = lospecPalette;
+
+static const uint8_t sc_maxBrightness = 200;
+static const LCD::RGB sc_white = { sc_maxBrightness, sc_maxBrightness, sc_maxBrightness };
+
 LCD::LCD(CPU* cpu, Memory* memory, ResourceHandle frameTexture, uint8_t* frameTextureData)
     : m_cpu(cpu)
 	, m_memory(memory)
@@ -21,11 +30,58 @@ LCD::~LCD()
 {
 }
 
+void LCD::clearScreen()
+{
+	for (uint32_t i = 0; i < 144; i++)
+	{
+		fillScanlineWithColor(i, sc_white);
+	}
+}
+
+void LCD::fillScanlineWithColor(uint8_t line, RGB color)
+{
+	for (uint32_t j = 0; j < 160; j++)
+	{
+		m_frameTextureData[(line * 160 + j) * 4] = color.r;
+		m_frameTextureData[(line * 160 + j) * 4 + 1] = color.g;
+		m_frameTextureData[(line * 160 + j) * 4 + 2] = color.b;
+		m_frameTextureData[(line * 160 + j) * 4 + 3] = 1;
+	}
+}
+
 void LCD::update(uint64_t cyclesToEmulate)
 {
 	if (m_memory->read(0xFF44) != m_currentLine && m_currentLine != -1)
 	{
 		m_currentLine = 0;
+	}
+
+	uint8_t LCDC = m_memory->read(0xFF40);
+	uint8_t newIsDisplayEnabled = (LCDC & 128) >> 7;		// (0=Off, 1=On)
+	if (m_isDisplayEnabled && !newIsDisplayEnabled)
+	{
+		// if the LCD was just disabled, clear LY=LYC and mode bits in STAT, set LY to 0 and clear the framebuffer
+		m_memory->write(0xFF41, m_memory->read(0xFF41) & 0xF8);
+		m_currentLine = 0;
+		m_memory->write(0xFF44, m_currentLine);
+		m_timerCounter = 0;
+	}
+
+	if (!m_isDisplayEnabled && newIsDisplayEnabled)
+	{
+		// if the LCD was just enabled, reset state to first scanline, clear the STAT interrupt and skip rendering the next frame
+		m_memory->write(0xFF41, (m_memory->read(0xFF41) & 0b11111100) | 2);
+		m_memory->write(0xFF0F, m_memory->read(0xFF0F) & ~(1 << CPU::Interrupt::LCD_STAT));
+		m_skipNextFrame = true;
+		m_timerCounter = 0;
+		clearScreen();
+	}
+
+	m_isDisplayEnabled = newIsDisplayEnabled;
+
+	if (!m_isDisplayEnabled)
+	{
+		return;
 	}
 
 	uint8_t LCDStatusRegister = m_memory->read(0xFF41);
@@ -43,7 +99,7 @@ void LCD::update(uint64_t cyclesToEmulate)
 		if (m_timerCounter >= 80)
 		{
 			// Enter scanline mode 3
-			m_timerCounter = 0;
+			m_timerCounter -= 80;
 			m_memory->write(0xFF41, (m_memory->read(0xFF41) & 0b11111100) | 3);
 		}
 		break;
@@ -54,7 +110,7 @@ void LCD::update(uint64_t cyclesToEmulate)
 		if (m_timerCounter >= 172)
 		{
 			// Enter hblank
-			m_timerCounter = 0;
+			m_timerCounter -= 172;
 			m_memory->write(0xFF41, (m_memory->read(0xFF41) & 0b11111100));
 
 			if (HBlankInterruptEnable)
@@ -75,7 +131,7 @@ void LCD::update(uint64_t cyclesToEmulate)
 	case 0:
 		if (m_timerCounter >= 204)
 		{
-			m_timerCounter = 0;
+			m_timerCounter -= 204;
 			m_currentLine++;
 
 			if (m_currentLine == 144)
@@ -107,7 +163,7 @@ void LCD::update(uint64_t cyclesToEmulate)
 	case 1:
 		if (m_timerCounter >= 456)
 		{
-			m_timerCounter = 0;
+			m_timerCounter -= 456;
 			m_currentLine++;
 
 			if (m_currentLine > 153)
@@ -121,6 +177,7 @@ void LCD::update(uint64_t cyclesToEmulate)
 				}
 
 				m_currentLine = 0;
+				m_skipNextFrame = false;
 			}
 		}
 		break;
@@ -144,24 +201,14 @@ void LCD::update(uint64_t cyclesToEmulate)
 	}
 }
 
-struct RGB
-{
-	uint8_t r, g, b;
-};
-static const RGB originalGBPalette[4] = { {0x9B, 0xBC, 0x0F}, {0x8B, 0xAC, 0x0F}, {0x30, 0x62, 0x30}, {0x0F, 0x38, 0x0F} };
-static const RGB lospecPalette[4] = { {0xC7, 0xC6, 0xC6}, {0x7C, 0x6D, 0x80}, {0x38, 0x28, 0x43}, {0x00, 0x00, 0x00} };
-static const RGB greyscalePalette[4] = { {255, 255, 255}, {168, 168, 168}, {84, 84, 84}, {0, 0, 0} };
-
-static const RGB* currentPalette = lospecPalette;
-
-static const uint8_t maxColorBrightness = 200;
-
 struct Sprite
 {
 	int spriteY, spriteX, tileIndex, attributes, locationInOAM;
 };
 void LCD::writeScanlineToFrame()
 {
+	if (m_currentLine >= 144 || m_skipNextFrame) return;
+
 	// Read LCD control register
 	uint8_t LCDC = m_memory->read(0xFF40);
 	uint8_t LCDDisplayEnable = (LCDC & 128) >> 7;		// (0=Off, 1=On)
@@ -176,26 +223,7 @@ void LCD::writeScanlineToFrame()
 
 	if (LCDDisplayEnable == 0)
 	{
-		if (Emulator::isCGBMode())
-		{
-			for (uint32_t j = 0; j < 160; j++)
-			{
-				m_frameTextureData[(m_currentLine * 160 + j) * 4] = maxColorBrightness;
-				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 1] = maxColorBrightness;
-				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 2] = maxColorBrightness;
-				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 3] = 1;
-			}
-		}
-		else
-		{
-			for (uint32_t j = 0; j < 160; j++)
-			{
-				m_frameTextureData[(m_currentLine * 160 + j) * 4] = currentPalette[0].r;
-				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 1] = currentPalette[0].g;
-				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 2] = currentPalette[0].b;
-				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 3] = 1;
-			}
-		}
+		fillScanlineWithColor(m_currentLine, Emulator::isCGBMode() ? sc_white : sc_currentPalette[0]);
 		return;
 	}
 
@@ -213,7 +241,7 @@ void LCD::writeScanlineToFrame()
 		int bgmX = SCX;
 		int bgmY = (SCY + m_currentLine) % 256;
 		int tileMapX = bgmX / 8;
-		int tileMapY = bgmY / 8;
+		int tileMapY = (bgmY / 8) % 32;
 		int tileMapOffset = (tileMapY * 32) + tileMapX;
 		int tileOffsetX = 7 - (bgmX % 8);
 		int tileOffsetY = bgmY % 8;
@@ -224,7 +252,7 @@ void LCD::writeScanlineToFrame()
 			{
 				beginTileMap = beginWindowTileMap;
 				tileMapX = ((j - WX) / 8) % 32;
-				tileMapY = (m_currentLine - WY) / 8;
+				tileMapY = ((m_currentLine - WY) / 8) % 32;
 				tileMapOffset = (tileMapY * 32) + tileMapX;
 				tileOffsetX = 7 - ((j - WX) % 8);
 				tileOffsetY = (m_currentLine - WY) % 8;
@@ -282,17 +310,17 @@ void LCD::writeScanlineToFrame()
 			if(Emulator::isCGBMode())
 			{
 				uint16_t packedColor = m_memory->m_BGColorPaletteRam[(colorPaletteIdx * 4) + paletteIdx];
-				m_frameTextureData[(m_currentLine * 160 + j) * 4] = (uint8_t)round(((packedColor & 0x1F) / 31.0) * maxColorBrightness);
-				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 1] = (uint8_t)round((((packedColor >> 5) & 0x1F) / 31.0) * maxColorBrightness);
-				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 2] = (uint8_t)round((((packedColor >> 10) & 0x1F) / 31.0) * maxColorBrightness);
+				m_frameTextureData[(m_currentLine * 160 + j) * 4] = (uint8_t)round(((packedColor & 0x1F) / 31.0) * sc_maxBrightness);
+				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 1] = (uint8_t)round((((packedColor >> 5) & 0x1F) / 31.0) * sc_maxBrightness);
+				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 2] = (uint8_t)round((((packedColor >> 10) & 0x1F) / 31.0) * sc_maxBrightness);
 				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 3] = 1;
 			}
 			else
 			{
 				uint8_t paletteColor = (paletteColors >> (paletteIdx * 2)) & 3;
-				m_frameTextureData[(m_currentLine * 160 + j) * 4] = currentPalette[paletteColor].r;
-				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 1] = currentPalette[paletteColor].g;
-				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 2] = currentPalette[paletteColor].b;
+				m_frameTextureData[(m_currentLine * 160 + j) * 4] = sc_currentPalette[paletteColor].r;
+				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 1] = sc_currentPalette[paletteColor].g;
+				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 2] = sc_currentPalette[paletteColor].b;
 				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 3] = 1;
 			}
 		}
@@ -303,9 +331,9 @@ void LCD::writeScanlineToFrame()
 		{
 			for (uint32_t j = 0; j < 160; j++)
 			{
-				m_frameTextureData[(m_currentLine * 160 + j) * 4] = currentPalette[0].r;
-				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 1] = currentPalette[0].g;
-				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 2] = currentPalette[0].b;
+				m_frameTextureData[(m_currentLine * 160 + j) * 4] = sc_currentPalette[0].r;
+				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 1] = sc_currentPalette[0].g;
+				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 2] = sc_currentPalette[0].b;
 				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 3] = 1;
 			}
 		}
@@ -428,9 +456,9 @@ void LCD::writeScanlineToFrame()
 						if (prioMapValue <= 4 || (prioMapValue > 4 && m_BGColorIndex[(m_currentLine * 160 + rowPixel)] == 0))
 						{
 							uint16_t packedColor = m_memory->m_OBJColorPaletteRam[(colorPaletteIdx * 4) + paletteIdx];
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = (uint8_t)round(((packedColor & 0x1F) / 31.0) * maxColorBrightness);
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = (uint8_t)round((((packedColor >> 5) & 0x1F) / 31.0) * maxColorBrightness);
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = (uint8_t)round((((packedColor >> 10) & 0x1F) / 31.0) * maxColorBrightness);
+							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = (uint8_t)round(((packedColor & 0x1F) / 31.0) * sc_maxBrightness);
+							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = (uint8_t)round((((packedColor >> 5) & 0x1F) / 31.0) * sc_maxBrightness);
+							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = (uint8_t)round((((packedColor >> 10) & 0x1F) / 31.0) * sc_maxBrightness);
 							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
 						}
 						else
@@ -448,9 +476,9 @@ void LCD::writeScanlineToFrame()
 							(OBJtoBGPriority && m_BGColorIndex[(m_currentLine * 160 + rowPixel)] == 0))
 						{
 							uint8_t paletteColor = (paletteColors >> (paletteIdx * 2)) & 3;
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = currentPalette[paletteColor].r;
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = currentPalette[paletteColor].g;
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = currentPalette[paletteColor].b;
+							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = sc_currentPalette[paletteColor].r;
+							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = sc_currentPalette[paletteColor].g;
+							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = sc_currentPalette[paletteColor].b;
 							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
 						}
 						else

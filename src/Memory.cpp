@@ -32,14 +32,14 @@ Memory::~Memory()
 {
 }
 
-void Memory::updateRTC(uint64_t cyclesToEmulate)
+void Memory::updateRTC(double deltaTimeSeconds)
 {
     if (((m_rtcUpperDayCounter >> 6) & 1) == 1)
     {
         return;
     }
 
-    m_rtcCounter += ((double)cyclesToEmulate / (double)CPU::s_frequencyHz);
+    m_rtcCounter += deltaTimeSeconds;
 
     while (m_rtcCounter >= 1.0)
     {
@@ -149,7 +149,8 @@ uint8_t Memory::handleCommonMemoryRead(size_t address)
 
     if (address == 0xFF4D)
     {
-        return CPU::s_frequencyHz == CPU::s_CGBfrequencyHz ? 0x80 : 0;
+        uint8_t currentSpeed = CPU::isDoubleSpeedMode() ? 0x80 : 0;
+        return (m_memory[0xFF4D] & 0x7F) | currentSpeed;
     }
 
     if (address == 0xFF4F)
@@ -238,6 +239,12 @@ void Memory::handleCommonMemoryWrite(size_t address, uint8_t value)
         {
             write(0xFE00 | i, read(sourceAddress | i));
         }
+    }
+
+    // LY is read-only
+    if (address == 0xFF44)
+    {
+        return;
     }
 }
 

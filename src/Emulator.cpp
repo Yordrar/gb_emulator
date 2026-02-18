@@ -114,9 +114,11 @@ void Emulator::emulate()
 
     saveTimer += deltaTimeSeconds;
 
+    m_memory->updateRTC(deltaTimeSeconds);
+
     uint64_t executedCycles = m_cpu->executeInstruction();
-    m_memory->updateRTC(executedCycles);
     m_timer->update(executedCycles);
+    if (CPU::isDoubleSpeedMode()) executedCycles /= 2;
     m_lcd->update(executedCycles);
     m_sound->update(executedCycles);
 

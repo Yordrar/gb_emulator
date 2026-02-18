@@ -15,7 +15,13 @@ public:
 
     void update(uint64_t cyclesToEmulate);
 
+    struct RGB
+    {
+        uint8_t r, g, b;
+    };
 private:
+    void clearScreen();
+    void fillScanlineWithColor(uint8_t line, RGB color);
     void writeScanlineToFrame();
 
     CPU* m_cpu;
@@ -28,5 +34,8 @@ private:
     uint8_t m_BGColorIndex[160 * 144] = {};
 
     double m_timerCounter;
-    int m_currentLine;
+    uint8_t m_currentLine;
+
+    bool m_isDisplayEnabled = false;
+    bool m_skipNextFrame = false;
 };
