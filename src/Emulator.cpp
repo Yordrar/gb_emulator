@@ -118,7 +118,7 @@ void Emulator::emulate()
 
     uint64_t executedCycles = m_cpu->executeInstruction();
     m_timer->update(executedCycles);
-    if (CPU::isDoubleSpeedMode()) executedCycles /= 2;
+    if (CPU::isDoubleSpeedMode()) executedCycles /= 4;
     m_lcd->update(executedCycles);
     m_sound->update(executedCycles);
 

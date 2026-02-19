@@ -201,10 +201,6 @@ void LCD::update(uint64_t cyclesToEmulate)
 	}
 }
 
-struct Sprite
-{
-	int spriteY, spriteX, tileIndex, attributes, locationInOAM;
-};
 void LCD::writeScanlineToFrame()
 {
 	if (m_currentLine >= 144 || m_skipNextFrame) return;
@@ -342,8 +338,8 @@ void LCD::writeScanlineToFrame()
 	uint8_t spritesDrawnThisScanline = 0;
 	if (SpriteDisplayEnable)
 	{
-		// Put all sprites into a structure to filter them easier later
-		std::vector<Sprite> sprites;
+		m_spritesToDraw.clear();
+		// Selection priority, first 10 in mem that can be drawn are selected
 		for (int i = 0; i < 40; i++)
 		{
 			Sprite sprite;
@@ -352,25 +348,19 @@ void LCD::writeScanlineToFrame()
 			sprite.tileIndex = m_memory->read(0xFE00 + (i * 4) + 2);
 			sprite.attributes = m_memory->read(0xFE00 + (i * 4) + 3);
 			sprite.locationInOAM = i;
-			sprites.push_back(sprite);
-		}
-		std::vector<Sprite> spritesToDraw;
-		// Selection priority, first 10 in mem that can be drawn are selected
-		for (int i = 0; i < 40; i++)
-		{
-			Sprite const& sprite = sprites[i];
+
 			if ((sprite.spriteY - 16) <= m_currentLine &&
 				(sprite.spriteY - 16 + (SpriteSize ? 16 : 8)) > m_currentLine)
 			{
-				spritesToDraw.push_back(sprite);
+				m_spritesToDraw.push_back(sprite);
 			}
-			if (spritesToDraw.size() >= 10)
+			if (m_spritesToDraw.size() >= 10)
 			{
 				break;
 			}
 		}
 		// Drawing priority
-		std::sort(spritesToDraw.begin(), spritesToDraw.end(), [](Sprite const& a, Sprite const& b)
+		std::sort(m_spritesToDraw.begin(), m_spritesToDraw.end(), [&](Sprite const& a, Sprite const& b)
 			{
 				if (!Emulator::isCGBMode())
 				{
@@ -385,108 +375,102 @@ void LCD::writeScanlineToFrame()
 			});
 		for (int rowPixel = 0; rowPixel < 160; ++rowPixel)
 		{
-			std::vector<Sprite> spritesInThisPixel;
-			for (int i = 0; i < spritesToDraw.size(); ++i)
+			for (int i = (int)m_spritesToDraw.size() - 1; i >= 0; --i)
 			{
-				if (spritesToDraw[i].spriteX - 8 <= rowPixel && spritesToDraw[i].spriteX > rowPixel)
+				if (m_spritesToDraw[i].spriteX - 8 <= rowPixel && m_spritesToDraw[i].spriteX > rowPixel)
 				{
-					spritesInThisPixel.push_back(spritesToDraw[i]);
-				}
-			}
+					uint8_t currentBGRed = m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4];
+					uint8_t currentBGGreen = m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1];
+					uint8_t currentBGBlue = m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2];
 
-			uint8_t currentBGRed = m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4];
-			uint8_t currentBGGreen = m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1];
-			uint8_t currentBGBlue = m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2];
+					uint8_t spriteY = m_spritesToDraw[i].spriteY;
+					uint8_t spriteX = m_spritesToDraw[i].spriteX;
+					uint8_t spriteTile = m_spritesToDraw[i].tileIndex;
+					uint8_t spriteAttributes = m_spritesToDraw[i].attributes;
+					uint8_t OBJtoBGPriority = (spriteAttributes & 128) >> 7;
+					uint8_t spriteYFlip = (spriteAttributes & 64) >> 6;
+					uint8_t spriteXFlip = (spriteAttributes & 32) >> 5;
+					uint8_t paletteNumber = (spriteAttributes & 16) >> 4;
+					uint8_t bank = Emulator::isCGBMode() ? (spriteAttributes & 8) >> 3 : 0;
+					uint8_t colorPaletteIdx = (spriteAttributes & 7);
+					uint8_t paletteColors = paletteNumber ? m_memory->read(0xFF49) : m_memory->read(0xFF48);
+					uint16_t beginSpriteTileData = 0x8000;
 
-			for (int i = (int)spritesInThisPixel.size() - 1; i >= 0; i--)
-			{
-				uint8_t spriteY = spritesInThisPixel[i].spriteY;
-				uint8_t spriteX = spritesInThisPixel[i].spriteX;
-				uint8_t spriteTile = spritesInThisPixel[i].tileIndex;
-				uint8_t spriteAttributes = spritesInThisPixel[i].attributes;
-				uint8_t OBJtoBGPriority = (spriteAttributes & 128) >> 7;
-				uint8_t spriteYFlip = (spriteAttributes & 64) >> 6;
-				uint8_t spriteXFlip = (spriteAttributes & 32) >> 5;
-				uint8_t paletteNumber = (spriteAttributes & 16) >> 4;
-				uint8_t bank = Emulator::isCGBMode() ? (spriteAttributes & 8) >> 3 : 0;
-				uint8_t colorPaletteIdx = (spriteAttributes & 7);
-				uint8_t paletteColors = paletteNumber ? m_memory->read(0xFF49) : m_memory->read(0xFF48);
-				uint16_t beginSpriteTileData = 0x8000;
+					m_priorityMap[(m_currentLine * 160 + rowPixel)] = (m_priorityMap[(m_currentLine * 160 + rowPixel)] & 0x5) | (OBJtoBGPriority << 1);
 
-				m_priorityMap[(m_currentLine * 160 + rowPixel)] = (m_priorityMap[(m_currentLine * 160 + rowPixel)] & 0x5) | (OBJtoBGPriority << 1);
-
-				int spriteOffsetY = m_currentLine - (spriteY - 16);
-				if (spriteYFlip)
-				{
-					if (SpriteSize)
+					int spriteOffsetY = m_currentLine - (spriteY - 16);
+					if (spriteYFlip)
 					{
-						spriteOffsetY = 15 - spriteOffsetY;
-					}
-					else
-					{
-						spriteOffsetY = 7 - spriteOffsetY;
-					}
-				}
-				if (SpriteSize) // if 8x16 mode, adjust the sprite tile number
-				{
-					if (spriteOffsetY < 8)
-					{
-						spriteTile &= 0xFE;
-					}
-					else
-					{
-						spriteOffsetY -= 8;
-						spriteTile |= 0x01;
-					}
-				}
-				int spriteOffsetX = 7 - (rowPixel - (spriteX - 8));
-				if (spriteXFlip)
-				{
-					spriteOffsetX = 7 - spriteOffsetX;
-				}
-
-				uint8_t spriteLSB = m_memory->readFromVramBank(beginSpriteTileData + (spriteTile << 4) + (spriteOffsetY << 1), bank);
-				uint8_t spriteMSB = m_memory->readFromVramBank(beginSpriteTileData + (spriteTile << 4) + (spriteOffsetY << 1) + 1, bank);
-				uint8_t paletteIdx = (((spriteMSB & (1 << spriteOffsetX)) >> spriteOffsetX) << 1) | (((spriteLSB & (1 << spriteOffsetX)) >> spriteOffsetX));
-				if (paletteIdx != 0)
-				{
-					if (Emulator::isCGBMode())
-					{
-						uint8_t prioMapValue = m_priorityMap[(m_currentLine * 160 + rowPixel)];
-						if (prioMapValue <= 4 || (prioMapValue > 4 && m_BGColorIndex[(m_currentLine * 160 + rowPixel)] == 0))
+						if (SpriteSize)
 						{
-							uint16_t packedColor = m_memory->m_OBJColorPaletteRam[(colorPaletteIdx * 4) + paletteIdx];
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = (uint8_t)round(((packedColor & 0x1F) / 31.0) * sc_maxBrightness);
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = (uint8_t)round((((packedColor >> 5) & 0x1F) / 31.0) * sc_maxBrightness);
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = (uint8_t)round((((packedColor >> 10) & 0x1F) / 31.0) * sc_maxBrightness);
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
+							spriteOffsetY = 15 - spriteOffsetY;
 						}
 						else
 						{
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = currentBGRed;
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = currentBGGreen;
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = currentBGBlue;
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
+							spriteOffsetY = 7 - spriteOffsetY;
 						}
 					}
-					else
+					if (SpriteSize) // if 8x16 mode, adjust the sprite tile number
 					{
-						if (!OBJtoBGPriority
-							||
-							(OBJtoBGPriority && m_BGColorIndex[(m_currentLine * 160 + rowPixel)] == 0))
+						if (spriteOffsetY < 8)
 						{
-							uint8_t paletteColor = (paletteColors >> (paletteIdx * 2)) & 3;
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = sc_currentPalette[paletteColor].r;
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = sc_currentPalette[paletteColor].g;
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = sc_currentPalette[paletteColor].b;
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
+							spriteTile &= 0xFE;
 						}
 						else
 						{
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = currentBGRed;
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = currentBGGreen;
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = currentBGBlue;
-							m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
+							spriteOffsetY -= 8;
+							spriteTile |= 0x01;
+						}
+					}
+					int spriteOffsetX = 7 - (rowPixel - (spriteX - 8));
+					if (spriteXFlip)
+					{
+						spriteOffsetX = 7 - spriteOffsetX;
+					}
+
+					uint8_t spriteLSB = m_memory->readFromVramBank(beginSpriteTileData + (spriteTile << 4) + (spriteOffsetY << 1), bank);
+					uint8_t spriteMSB = m_memory->readFromVramBank(beginSpriteTileData + (spriteTile << 4) + (spriteOffsetY << 1) + 1, bank);
+					uint8_t paletteIdx = (((spriteMSB & (1 << spriteOffsetX)) >> spriteOffsetX) << 1) | (((spriteLSB & (1 << spriteOffsetX)) >> spriteOffsetX));
+					if (paletteIdx != 0)
+					{
+						if (Emulator::isCGBMode())
+						{
+							uint8_t prioMapValue = m_priorityMap[(m_currentLine * 160 + rowPixel)];
+							if (prioMapValue <= 4 || (prioMapValue > 4 && m_BGColorIndex[(m_currentLine * 160 + rowPixel)] == 0))
+							{
+								uint16_t packedColor = m_memory->m_OBJColorPaletteRam[(colorPaletteIdx * 4) + paletteIdx];
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = (uint8_t)round(((packedColor & 0x1F) / 31.0) * sc_maxBrightness);
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = (uint8_t)round((((packedColor >> 5) & 0x1F) / 31.0) * sc_maxBrightness);
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = (uint8_t)round((((packedColor >> 10) & 0x1F) / 31.0) * sc_maxBrightness);
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
+							}
+							else
+							{
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = currentBGRed;
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = currentBGGreen;
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = currentBGBlue;
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
+							}
+						}
+						else
+						{
+							if (!OBJtoBGPriority
+								||
+								(OBJtoBGPriority && m_BGColorIndex[(m_currentLine * 160 + rowPixel)] == 0))
+							{
+								uint8_t paletteColor = (paletteColors >> (paletteIdx * 2)) & 3;
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = sc_currentPalette[paletteColor].r;
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = sc_currentPalette[paletteColor].g;
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = sc_currentPalette[paletteColor].b;
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
+							}
+							else
+							{
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = currentBGRed;
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = currentBGGreen;
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = currentBGBlue;
+								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
+							}
 						}
 					}
 				}

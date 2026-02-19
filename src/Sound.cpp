@@ -2,6 +2,8 @@
 
 #include <Windows.h>
 
+#include <thread>
+#include <chrono>
 #include <cassert>
 
 #include "Memory.h"
@@ -87,7 +89,7 @@ void Sound::update(uint64_t cyclesToEmulate)
         updateFrequencyTimerChannel3();
         updateFrequencyTimerChannel4();
 
-        if ((m_sampleClock % (CPU::s_frequencyHz / Sound::sc_SampleRate)) == 0)
+        if ((m_sampleClock % (CPU::s_normalSpeedFrequencyHz / Sound::sc_SampleRate)) == 0)
         {
             if (soundEnable)
             {
@@ -124,9 +126,9 @@ void Sound::update(uint64_t cyclesToEmulate)
             }
             if (m_audioDataBufferSampleCount >= sc_AudioDataBufferSize)
             {
-                while (SDL_GetQueuedAudioSize(m_audioDevice) > (sc_AudioDataBufferSize * sizeof(float)))
+                while (SDL_GetQueuedAudioSize(m_audioDevice) > (2 * sc_AudioDataBufferSize * sizeof(float)))
                 {
-                    Sleep(1);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 }
                 SDL_QueueAudio(m_audioDevice, m_audioDataBuffer, (sc_AudioDataBufferSize * sizeof(float)));
                 m_audioDataBufferSampleCount = 0;

@@ -36,7 +36,7 @@ private:
     SDL_AudioDeviceID m_audioDevice;
     SDL_AudioSpec m_audioSpec;
 
-    static const uint64_t sc_AudioDataBufferSize = 2048;
+    static const uint64_t sc_AudioDataBufferSize = 4096;
     float m_audioDataBuffer[sc_AudioDataBufferSize] = { 0 };
     uint32_t m_audioDataBufferSampleCount = 0;
 

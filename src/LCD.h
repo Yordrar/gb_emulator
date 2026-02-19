@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include <resource/ResourceHandle.h>
 
@@ -32,6 +33,12 @@ private:
 
     uint8_t m_priorityMap[160 * 144] = {};
     uint8_t m_BGColorIndex[160 * 144] = {};
+
+    struct Sprite
+    {
+        int spriteY, spriteX, tileIndex, attributes, locationInOAM;
+    };
+    std::vector<Sprite> m_spritesToDraw;
 
     double m_timerCounter;
     uint8_t m_currentLine;

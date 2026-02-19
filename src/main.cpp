@@ -123,31 +123,34 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
         emulator.openRomFile(WideStrToStr(pCmdLine).c_str());
     }
 
-    // TODO implement UI for loading ROMs
     bool showInfoWindow = false;
-    renderer->registerImguiCallback([&showInfoWindow, &renderer, &mainPass, &emulator]()
+    bool showMenuBar = false;
+    renderer->registerImguiCallback([&showInfoWindow, &showMenuBar, &renderer, &mainPass, &emulator]()
         {
-            if (ImGui::BeginMainMenuBar())
+            if (showMenuBar)
             {
-                if (ImGui::BeginMenu("File"))
+                if (ImGui::BeginMainMenuBar())
                 {
-                    if (ImGui::MenuItem("Open ROM...", "Ctrl+O"))
+                    if (ImGui::BeginMenu("File"))
                     {
-                        IGFD::FileDialogConfig config;
-                        config.path = ".";
-                        ImGuiFileDialog::Instance()->OpenDialog("OpenROMFileDialogKey", "Choose ROM File", ".gb, .gbc", config);
+                        if (ImGui::MenuItem("Open ROM...", "Ctrl+O"))
+                        {
+                            IGFD::FileDialogConfig config;
+                            config.path = ".";
+                            ImGuiFileDialog::Instance()->OpenDialog("OpenROMFileDialogKey", "Choose ROM File", ".gb, .gbc", config);
+                        }
+                        ImGui::EndMenu();
                     }
-                    ImGui::EndMenu();
-                }
-                if (ImGui::BeginMenu("View"))
-                {
-                    if (ImGui::MenuItem("View ROM Info...") && emulator.hasOpenedRomFile())
+                    if (ImGui::BeginMenu("View"))
                     {
-                        showInfoWindow = true;
+                        if (ImGui::MenuItem("View ROM Info...") && emulator.hasOpenedRomFile())
+                        {
+                            showInfoWindow = true;
+                        }
+                        ImGui::EndMenu();
                     }
-                    ImGui::EndMenu();
+                    ImGui::EndMainMenuBar();
                 }
-                ImGui::EndMainMenuBar();
             }
 
             if (ImGuiFileDialog::Instance()->Display("OpenROMFileDialogKey"))
@@ -192,9 +195,13 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
             }
         });
 
-    window.onKeyboardButtonDown([&emulator](WPARAM wParam, LPARAM lParam)
+    window.onKeyboardButtonDown([&emulator, &showMenuBar](WPARAM wParam, LPARAM lParam)
         {
             emulator.processKeyboardInput(wParam, lParam);
+            if (wParam == VK_ESCAPE)
+            {
+                showMenuBar = !showMenuBar;
+            }
         });
     window.onKeyboardButtonUp([&emulator](WPARAM wParam, LPARAM lParam)
         {
