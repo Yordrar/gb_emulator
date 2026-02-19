@@ -24,6 +24,7 @@ private:
     void clearScreen();
     void fillScanlineWithColor(uint8_t line, RGB color);
     void writeScanlineToFrame();
+    void readSpritesToDraw();
 
     CPU* m_cpu;
     Memory* m_memory;

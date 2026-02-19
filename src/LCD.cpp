@@ -45,8 +45,49 @@ void LCD::fillScanlineWithColor(uint8_t line, RGB color)
 		m_frameTextureData[(line * 160 + j) * 4] = color.r;
 		m_frameTextureData[(line * 160 + j) * 4 + 1] = color.g;
 		m_frameTextureData[(line * 160 + j) * 4 + 2] = color.b;
-		m_frameTextureData[(line * 160 + j) * 4 + 3] = 1;
 	}
+}
+
+void LCD::readSpritesToDraw()
+{
+	uint8_t LCDC = m_memory->read(0xFF40);
+	uint8_t SpriteSize = (LCDC & 4) >> 2; // (0=8x8, 1=8x16)
+	m_spritesToDraw.clear();
+	// Selection priority, first 10 in mem that can be drawn are selected
+	for (int i = 0; i < 40; i++)
+	{
+		Sprite sprite;
+		sprite.spriteY = m_memory->read(0xFE00 + (i * 4));
+		sprite.spriteX = m_memory->read(0xFE00 + (i * 4) + 1);
+		sprite.tileIndex = m_memory->read(0xFE00 + (i * 4) + 2);
+		sprite.attributes = m_memory->read(0xFE00 + (i * 4) + 3);
+		sprite.locationInOAM = i;
+
+		if ((sprite.spriteY - 16) <= m_currentLine &&
+			(sprite.spriteY - 16 + (SpriteSize ? 16 : 8)) > m_currentLine)
+		{
+			m_spritesToDraw.push_back(sprite);
+		}
+		if (m_spritesToDraw.size() >= 10)
+		{
+			break;
+		}
+	}
+	// Drawing priority
+	std::sort(m_spritesToDraw.begin(), m_spritesToDraw.end(), [&](Sprite const& a, Sprite const& b)
+		{
+			if (!Emulator::isCGBMode())
+			{
+				if (a.spriteX < b.spriteX) return true;
+				if (a.spriteX == b.spriteX && a.locationInOAM < b.locationInOAM) return true;
+			}
+			else
+			{
+				if (a.locationInOAM < b.locationInOAM) return true;
+			}
+			return false;
+		});
+
 }
 
 void LCD::update(uint64_t cyclesToEmulate)
@@ -98,6 +139,7 @@ void LCD::update(uint64_t cyclesToEmulate)
 	case 2:
 		if (m_timerCounter >= 80)
 		{
+			readSpritesToDraw();
 			// Enter scanline mode 3
 			m_timerCounter -= 80;
 			m_memory->write(0xFF41, (m_memory->read(0xFF41) & 0b11111100) | 3);
@@ -237,7 +279,7 @@ void LCD::writeScanlineToFrame()
 		int bgmX = SCX;
 		int bgmY = (SCY + m_currentLine) % 256;
 		int tileMapX = bgmX / 8;
-		int tileMapY = (bgmY / 8) % 32;
+		int tileMapY = bgmY / 8;
 		int tileMapOffset = (tileMapY * 32) + tileMapX;
 		int tileOffsetX = 7 - (bgmX % 8);
 		int tileOffsetY = bgmY % 8;
@@ -309,7 +351,6 @@ void LCD::writeScanlineToFrame()
 				m_frameTextureData[(m_currentLine * 160 + j) * 4] = (uint8_t)round(((packedColor & 0x1F) / 31.0) * sc_maxBrightness);
 				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 1] = (uint8_t)round((((packedColor >> 5) & 0x1F) / 31.0) * sc_maxBrightness);
 				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 2] = (uint8_t)round((((packedColor >> 10) & 0x1F) / 31.0) * sc_maxBrightness);
-				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 3] = 1;
 			}
 			else
 			{
@@ -317,7 +358,6 @@ void LCD::writeScanlineToFrame()
 				m_frameTextureData[(m_currentLine * 160 + j) * 4] = sc_currentPalette[paletteColor].r;
 				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 1] = sc_currentPalette[paletteColor].g;
 				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 2] = sc_currentPalette[paletteColor].b;
-				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 3] = 1;
 			}
 		}
 	}
@@ -330,7 +370,6 @@ void LCD::writeScanlineToFrame()
 				m_frameTextureData[(m_currentLine * 160 + j) * 4] = sc_currentPalette[0].r;
 				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 1] = sc_currentPalette[0].g;
 				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 2] = sc_currentPalette[0].b;
-				m_frameTextureData[(m_currentLine * 160 + j) * 4 + 3] = 1;
 			}
 		}
 	}
@@ -338,41 +377,6 @@ void LCD::writeScanlineToFrame()
 	uint8_t spritesDrawnThisScanline = 0;
 	if (SpriteDisplayEnable)
 	{
-		m_spritesToDraw.clear();
-		// Selection priority, first 10 in mem that can be drawn are selected
-		for (int i = 0; i < 40; i++)
-		{
-			Sprite sprite;
-			sprite.spriteY = m_memory->read(0xFE00 + (i * 4));
-			sprite.spriteX = m_memory->read(0xFE00 + (i * 4) + 1);
-			sprite.tileIndex = m_memory->read(0xFE00 + (i * 4) + 2);
-			sprite.attributes = m_memory->read(0xFE00 + (i * 4) + 3);
-			sprite.locationInOAM = i;
-
-			if ((sprite.spriteY - 16) <= m_currentLine &&
-				(sprite.spriteY - 16 + (SpriteSize ? 16 : 8)) > m_currentLine)
-			{
-				m_spritesToDraw.push_back(sprite);
-			}
-			if (m_spritesToDraw.size() >= 10)
-			{
-				break;
-			}
-		}
-		// Drawing priority
-		std::sort(m_spritesToDraw.begin(), m_spritesToDraw.end(), [&](Sprite const& a, Sprite const& b)
-			{
-				if (!Emulator::isCGBMode())
-				{
-					if (a.spriteX < b.spriteX) return true;
-					if (a.spriteX == b.spriteX && a.locationInOAM < b.locationInOAM) return true;
-				}
-				else
-				{
-					if (a.locationInOAM < b.locationInOAM) return true;
-				}
-				return false;
-			});
 		for (int rowPixel = 0; rowPixel < 160; ++rowPixel)
 		{
 			for (int i = (int)m_spritesToDraw.size() - 1; i >= 0; --i)
@@ -442,14 +446,12 @@ void LCD::writeScanlineToFrame()
 								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = (uint8_t)round(((packedColor & 0x1F) / 31.0) * sc_maxBrightness);
 								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = (uint8_t)round((((packedColor >> 5) & 0x1F) / 31.0) * sc_maxBrightness);
 								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = (uint8_t)round((((packedColor >> 10) & 0x1F) / 31.0) * sc_maxBrightness);
-								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
 							}
 							else
 							{
 								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = currentBGRed;
 								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = currentBGGreen;
 								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = currentBGBlue;
-								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
 							}
 						}
 						else
@@ -462,14 +464,12 @@ void LCD::writeScanlineToFrame()
 								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = sc_currentPalette[paletteColor].r;
 								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = sc_currentPalette[paletteColor].g;
 								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = sc_currentPalette[paletteColor].b;
-								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
 							}
 							else
 							{
 								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4] = currentBGRed;
 								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 1] = currentBGGreen;
 								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 2] = currentBGBlue;
-								m_frameTextureData[(m_currentLine * 160 + rowPixel) * 4 + 3] = 1;
 							}
 						}
 					}

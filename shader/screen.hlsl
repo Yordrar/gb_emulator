@@ -37,5 +37,5 @@ float4 main_ps(VSOut vsOut) : SV_Target
     Texture2D tex = ResourceDescriptorHeap[indices.textureIdx];
     SamplerState samp = SamplerDescriptorHeap[0];
     float4 col = tex.Sample(samp, vsOut.m_uvs);
-    return col;
+    return float4(col.rgb, 1.0);
 }
