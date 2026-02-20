@@ -202,10 +202,18 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
             {
                 showMenuBar = !showMenuBar;
             }
+            if (wParam == VK_F1)
+            {
+                emulator.setTurboModeMultiplier(2);
+            }
         });
     window.onKeyboardButtonUp([&emulator](WPARAM wParam, LPARAM lParam)
         {
             emulator.processKeyboardInput(wParam, lParam);
+            if (wParam == VK_F1)
+            {
+                emulator.setTurboModeMultiplier(1);
+            }
         });
 
     while (!window.shouldCloseWindow())

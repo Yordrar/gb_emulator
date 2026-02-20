@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cassert>
 
+#include "Emulator.h"
 #include "Memory.h"
 #include "CPU.h"
 
@@ -89,7 +90,7 @@ void Sound::update(uint64_t cyclesToEmulate)
         updateFrequencyTimerChannel3();
         updateFrequencyTimerChannel4();
 
-        if ((m_sampleClock % (CPU::s_normalSpeedFrequencyHz / Sound::sc_SampleRate)) == 0)
+        if (m_sampleClock % ((CPU::s_normalSpeedFrequencyHz / Sound::sc_SampleRate) * Emulator::s_turboModeMultiplier) == 0)
         {
             if (soundEnable)
             {

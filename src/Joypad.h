@@ -15,14 +15,18 @@ public:
     bool updateJOYPRegister();
     void processKeyboardInput(WPARAM wParam, LPARAM lParam);
 
-private:
-    void pollControllerInput();
-
     enum InputDeviceType
     {
         Keyboard,
         Controller
     };
+
+    InputDeviceType getCurrentInputDeviceType() const { return m_currentInputDeviceType; }
+    bool areShoulderButtonsBeingPressed() const { return !m_LBPressed || !m_RBPressed; }
+
+private:
+    void pollControllerInput();
+
     Memory* m_memory;
 
     uint8_t m_upPressed;
@@ -33,6 +37,8 @@ private:
     uint8_t m_BPressed;
     uint8_t m_startPressed;
     uint8_t m_selectPressed;
+    uint8_t m_LBPressed;
+    uint8_t m_RBPressed;
 
     std::thread m_controllerPollingThread;
     bool m_continueControllerPollingThread = true;

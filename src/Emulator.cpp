@@ -14,6 +14,7 @@
 #include "Sound.h"
 
 Emulator::Mode Emulator::s_currentMode = Mode::DMG;
+uint32_t Emulator::s_turboModeMultiplier = 1;
 
 std::chrono::steady_clock::time_point start;
 std::chrono::steady_clock::time_point end;
@@ -105,6 +106,11 @@ void Emulator::emulate()
     if (!m_hasOpenedRomFile) return;
     if (!m_cartridge) return;
 
+    if (m_joypad->getCurrentInputDeviceType() == Joypad::InputDeviceType::Controller)
+    {
+        setTurboModeMultiplier(m_joypad->areShoulderButtonsBeingPressed() ? 2 : 1);
+    }
+
     end = std::chrono::high_resolution_clock::now();
 
     auto elapsedNanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
@@ -144,8 +150,15 @@ void Emulator::saveBatteryBackedRamToFile()
     if (!m_cartridge || !m_cartridgeInfo.hasBatteryBackedRam()) return;
 
     std::string savFilename = m_romFilename.substr(0, m_romFilename.rfind(".") + 1) + "sav";
-    std::ofstream file(savFilename, std::fstream::out | std::fstream::binary | std::fstream::trunc);
-    m_memory->saveRamBanksToFile(file);
+    std::ofstream savFile(savFilename, std::fstream::out | std::fstream::binary | std::fstream::trunc);
+    m_memory->saveRamBanksToFile(savFile);
+
+    if (m_cartridgeInfo.hasMBC3())
+    {
+        std::string rtcFilename = m_romFilename.substr(0, m_romFilename.rfind(".") + 1) + "rtc";
+        std::ofstream rtcFile(rtcFilename, std::fstream::out | std::fstream::binary | std::fstream::trunc);
+        m_memory->saveRTCRegistersToFile(rtcFile);
+    }
 }
 
 void Emulator::loadSavFileToRam()
@@ -153,14 +166,20 @@ void Emulator::loadSavFileToRam()
     if (!m_cartridge) return;
 
     std::string savFilename = m_romFilename.substr(0, m_romFilename.rfind(".") + 1) + "sav";
-
     if (!std::filesystem::exists(savFilename))
     {
         return;
     }
+    std::ifstream savFile(savFilename, std::fstream::in | std::fstream::binary);
+    m_memory->loadRamBanksFromFile(savFile);
 
-    std::ifstream file(savFilename, std::fstream::in | std::fstream::binary);
-    m_memory->loadRamBanksFromFile(file);
+    std::string rtcFilename = m_romFilename.substr(0, m_romFilename.rfind(".") + 1) + "rtc";
+    if (!std::filesystem::exists(rtcFilename))
+    {
+        return;
+    }
+    std::ifstream rtcFile(rtcFilename, std::fstream::in | std::fstream::binary);
+    m_memory->loadRTCRegistersFromFile(rtcFile);
 }
 
 void Emulator::extractCartridgeInfo()

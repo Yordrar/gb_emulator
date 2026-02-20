@@ -15,6 +15,8 @@ Joypad::Joypad(Memory* memory)
     , m_BPressed(1)
     , m_startPressed(1)
     , m_selectPressed(1)
+    , m_LBPressed(1)
+    , m_RBPressed(1)
     , m_controllerPollingThread(&Joypad::pollControllerInput, this)
 {
 }
@@ -111,6 +113,8 @@ void Joypad::pollControllerInput()
                 m_upPressed = (controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP) ? 0 : 1;
                 m_leftPressed = (controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT) ? 0 : 1;
                 m_rightPressed = (controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT) ? 0 : 1;
+                m_LBPressed = (controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER) ? 0 : 1;
+                m_RBPressed = (controllerState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER) ? 0 : 1;
             }
             if (controllerState.Gamepad.wButtons != 0 && m_currentInputDeviceType != InputDeviceType::Controller)
             {

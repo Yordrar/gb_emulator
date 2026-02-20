@@ -5,11 +5,11 @@ This is a small GameBoy/GameBoy Color emulator I made as a side project to get i
 Although it doesn't implement some quirks or bugs found in real hardware, it is a complete emulator capable of running some of the most
 complex ROMs. I decided not to make it more accurate to keep the scope small, as I intended this to be a quick side project.
 
-It features keyboard and Xbox controller support through Xinput, and memory bank controllers 1, 2, 3 and 5, including RTC clock emulation and battery-backed RAM. The emulator periodically saves the battery-backed RAM banks to a .sav file whenever the ROM writes to them.
+It features keyboard and Xbox controller support through Xinput, and memory bank controllers 1, 2, 3 and 5, including RTC clock emulation and battery-backed RAM. The emulator periodically saves the battery-backed RAM banks to a .sav file and the RTC registers to a .rtc file whenever the ROM writes to them.
 
 ## Usage
 
-To open a ROM file, use the menu bar at the top to open the file dialog and choose a valid rom.
+To open a ROM file, toggle the menu bar at the top with ESC and use it to open the file dialog and choose a valid rom.
 You can also either drag it to the built exe file or pass the path as the first parameter in the command line, like
 ```
 > gb_emulator.exe MyRom.[gb/gbc]
@@ -23,6 +23,8 @@ Keyboard controls:
  - V: Select button
 
 The xbox controller maps the obvious buttons to the GB ones (D-Pad/Left Joystick -> D-Pad, A button -> A button, etc.)
+
+The emulator also features a double speed mode that you can activate by holding the F1 key on the keyboard or either LB/RB on an xbox controller
 
 ## Build
 

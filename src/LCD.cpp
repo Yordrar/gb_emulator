@@ -90,6 +90,26 @@ void LCD::readSpritesToDraw()
 
 }
 
+void LCD::checkForSTATInterrupt()
+{
+	uint8_t LCDStatusRegister = m_memory->read(0xFF41);
+	uint8_t LYCLYInterruptEnable = (LCDStatusRegister & 0b01000000) >> 6;
+
+	// Request interrupt if LYC==LY and is enabled
+	if (m_currentLine == m_memory->read(0xFF45))
+	{
+		m_memory->write(0xFF41, m_memory->read(0xFF41) | (1 << 2));
+		if (LYCLYInterruptEnable)
+		{
+			m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
+		}
+	}
+	else
+	{
+		m_memory->write(0xFF41, m_memory->read(0xFF41) & ~(1 << 2));
+	}
+}
+
 void LCD::update(uint64_t cyclesToEmulate)
 {
 	if (m_memory->read(0xFF44) != m_currentLine && m_currentLine != -1)
@@ -174,7 +194,9 @@ void LCD::update(uint64_t cyclesToEmulate)
 		if (m_timerCounter >= 204)
 		{
 			m_timerCounter -= 204;
+
 			m_currentLine++;
+			checkForSTATInterrupt();
 
 			if (m_currentLine == 144)
 			{
@@ -206,7 +228,9 @@ void LCD::update(uint64_t cyclesToEmulate)
 		if (m_timerCounter >= 456)
 		{
 			m_timerCounter -= 456;
+
 			m_currentLine++;
+			checkForSTATInterrupt();
 
 			if (m_currentLine > 153)
 			{
@@ -219,6 +243,8 @@ void LCD::update(uint64_t cyclesToEmulate)
 				}
 
 				m_currentLine = 0;
+				checkForSTATInterrupt();
+
 				m_skipNextFrame = false;
 			}
 		}
@@ -228,14 +254,10 @@ void LCD::update(uint64_t cyclesToEmulate)
 	// Update LY
 	m_memory->write(0xFF44, m_currentLine);
 
-	// Request interrupt if LYC==LY and is enabled
+	// Update LYC==LY
 	if (m_currentLine == m_memory->read(0xFF45))
 	{
 		m_memory->write(0xFF41, m_memory->read(0xFF41) | (1 << 2));
-		if (LYCLYInterruptEnable)
-		{
-			m_cpu->requestInterrupt(CPU::Interrupt::LCD_STAT);
-		}
 	}
 	else
 	{

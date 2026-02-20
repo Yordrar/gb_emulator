@@ -25,6 +25,7 @@ private:
     void fillScanlineWithColor(uint8_t line, RGB color);
     void writeScanlineToFrame();
     void readSpritesToDraw();
+    void checkForSTATInterrupt();
 
     CPU* m_cpu;
     Memory* m_memory;

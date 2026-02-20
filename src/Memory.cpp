@@ -103,6 +103,34 @@ void Memory::write(size_t address, uint8_t value)
     m_memory[address] = value;
 }
 
+void Memory::saveRTCRegistersToFile(std::ofstream& file)
+{
+    uint64_t timestamp = static_cast<uint64_t>(std::time(nullptr));
+    file.write(reinterpret_cast<char*>(&timestamp), sizeof(timestamp));
+    file.write(reinterpret_cast<char*>(&m_rtcSeconds), sizeof(m_rtcSeconds));
+    file.write(reinterpret_cast<char*>(&m_rtcMinutes), sizeof(m_rtcMinutes));
+    file.write(reinterpret_cast<char*>(&m_rtcHours), sizeof(m_rtcHours));
+    file.write(reinterpret_cast<char*>(&m_rtcLowerDayCounter), sizeof(m_rtcLowerDayCounter));
+    file.write(reinterpret_cast<char*>(&m_rtcUpperDayCounter), sizeof(m_rtcUpperDayCounter));
+}
+
+void Memory::loadRTCRegistersFromFile(std::ifstream& file)
+{
+    uint64_t timestamp = static_cast<uint64_t>(std::time(nullptr));
+    uint64_t savedTimestamp;
+    file.read(reinterpret_cast<char*>(&savedTimestamp), sizeof(savedTimestamp));
+    file.read(reinterpret_cast<char*>(&m_rtcSeconds), sizeof(m_rtcSeconds));
+    file.read(reinterpret_cast<char*>(&m_rtcMinutes), sizeof(m_rtcMinutes));
+    file.read(reinterpret_cast<char*>(&m_rtcHours), sizeof(m_rtcHours));
+    file.read(reinterpret_cast<char*>(&m_rtcLowerDayCounter), sizeof(m_rtcLowerDayCounter));
+    file.read(reinterpret_cast<char*>(&m_rtcUpperDayCounter), sizeof(m_rtcUpperDayCounter));
+
+    if (timestamp > savedTimestamp)
+    {
+        updateRTC(static_cast<double>(timestamp - savedTimestamp));
+    }
+}
+
 uint8_t Memory::readFromVramBank(size_t address, uint8_t bank)
 {
     return m_vramBanks[(bank * 0x2000) + (address - 0x8000)];
@@ -245,6 +273,12 @@ void Memory::handleCommonMemoryWrite(size_t address, uint8_t value)
     if (address == 0xFF44)
     {
         return;
+    }
+
+    // If writing to LYC, immediately check if STAT interrupt is needed
+    if (address == 0xFF45 && value == m_memory[0xFF44] && (read(0xFF41) & 0b01000000))
+    {
+        write(0xFF0F, read(0xFF0F) | (1 << 1));
     }
 }
 

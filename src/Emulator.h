@@ -50,6 +50,9 @@ public:
     void saveBatteryBackedRamToFile();
     void loadSavFileToRam();
 
+    void setTurboModeMultiplier(uint32_t val) { s_turboModeMultiplier = val; }
+    static uint32_t s_turboModeMultiplier;
+
     enum class Mode
     {
         DMG, // Regular Game Boy

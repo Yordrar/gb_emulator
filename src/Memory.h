@@ -35,6 +35,9 @@ public:
     virtual void saveRamBanksToFile(std::ofstream& file) {};
     virtual void loadRamBanksFromFile(std::ifstream& file) {};
 
+    void saveRTCRegistersToFile(std::ofstream& file);
+    void loadRTCRegistersFromFile(std::ifstream& file);
+
     uint8_t readFromVramBank(size_t address, uint8_t bank);
     void performHBlankDMATransfer();
 
