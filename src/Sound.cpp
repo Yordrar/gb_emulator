@@ -111,7 +111,7 @@ void Sound::update(uint64_t cyclesToEmulate)
                         ((sampleCh1 * outputCh1ToLeft * m_ch1Enabled) +
                         (sampleCh2 * outputCh2ToLeft * m_ch2Enabled) +
                         (sampleCh3 * outputCh3ToLeft * m_ch3Enabled) +
-                        (sampleCh4 * outputCh4ToRight * m_ch4Enabled) ) / 4.0f;
+                        (sampleCh4 * outputCh4ToLeft * m_ch4Enabled) ) / 4.0f;
                 float rightSample =
                         ((sampleCh1 * outputCh1ToRight * m_ch1Enabled) +
                         (sampleCh2 * outputCh2ToRight * m_ch2Enabled) +

@@ -2619,7 +2619,6 @@ uint8_t CPU::getCarryFlagsFor16BitAddition(uint16_t op1, uint16_t op2)
 
 uint8_t CPU::getCarryFlagsFor16BitSubtraction(uint16_t op1, uint16_t op2)
 {
-    DebugBreak();
     uint8_t newFlag = 0;
     if (op2 > op1)
     {

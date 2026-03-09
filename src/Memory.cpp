@@ -170,6 +170,11 @@ uint8_t Memory::handleCommonMemoryRead(size_t address)
         }
     }
 
+    if (address >= 0xE000 && address <= 0xFDFF)
+    {
+        address -= 0x2000;
+    }
+
     if (address >= 0xFF4C && address <= 0xFF7F && !Emulator::isCGBMode())
     {
         return 0xFF;
